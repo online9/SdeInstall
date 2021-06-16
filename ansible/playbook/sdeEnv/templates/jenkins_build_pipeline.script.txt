@@ -1,0 +1,125 @@
+node {
+    def DOMAIN_NAME = "mat"
+    def BIZ_KIND = "mpm"
+    def PROJ_NAME = "MOB2021"
+    def SVN_TARGET = "src"
+	def OP_MODE = "o"
+    def SVR_TYPE = "was"
+
+    def POM = ""
+	def MVN_OPT = ""
+    def FILE_NAME = ""
+    def FILE_EXT = "war"
+    def TARGET_FILE = ""
+    def DEPLOY_TYPE = "full"
+	def	RUN_MODE = "${env.RUN_MODE}"
+    def PROJ_KIND = "${DOMAIN_NAME}-${BIZ_KIND}"
+    def UTILS_PATH = "/data/utils"
+    def BUILD_BIN_PATH = "/data/build/bin"
+    def BUILD_REPO = "/data/build/${DOMAIN_NAME}/${BIZ_KIND}/${SVR_TYPE}"
+    def DEPLOY_PATH = "/${RUN_MODE}${DOMAIN_NAME}/deploy/${BIZ_KIND}/${SVR_TYPE}"
+
+    load "${BUILD_BIN_PATH}/config/${RUN_MODE}-svn-list.groovy"
+    load "${BUILD_BIN_PATH}/config/${RUN_MODE}-${DOMAIN_NAME}-server-list.groovy"
+
+    def SVR_IP_01 = env."svr_ip_${DOMAIN_NAME}_${BIZ_KIND}_${OP_MODE}_${SVR_TYPE}_01"
+    def SVR_IP_02 = env."svr_ip_${DOMAIN_NAME}_${BIZ_KIND}_${OP_MODE}_${SVR_TYPE}_02"
+
+    def MAVEN_HOME  = tool "M3"
+    def SVN_REPO = env."svn_${DOMAIN_NAME}/${PROJ_NAME}"
+    def BUILD_VERSION = VersionNumber([
+        projectStartDate: '2000-01-01', 
+        skipFailedBuilds: true, 
+        versionNumberString: '${YEARS_SINCE_PROJECT_START}.${BUILD_MONTH}.${BUILDS_THIS_MONTH}'
+    ])
+
+	if (SVR_TYPE == 'web') {
+		MVN_OPT="-f pom4web.xml"
+		FILE_EXT = "tar.gz"
+	}
+
+    stage('Checkout') {
+        checkout([
+            $class: 'SubversionSCM', 
+            additionalCredentials: [], 
+            filterChangelog: false, 
+            ignoreDirPropChanges: false, 
+            locations: [
+                [cancelProcessOnExternalsFail: true, 
+                credentialsId: 'admin', 
+                depthOption: 'files', 
+                ignoreExternalsOption: true, 
+                local: '.', 
+                remote: SVN_REPO],
+                [cancelProcessOnExternalsFail: true, 
+                credentialsId: 'admin', 
+                depthOption: 'infinity', 
+                ignoreExternalsOption: true, 
+                local: SVN_TARGET, 
+                remote: SVN_REPO + '/' + SVN_TARGET]], 
+            workspaceUpdater: [$class: 'UpdateUpdater']
+        ])
+    }   
+
+    stage('Build') {
+        POM = readMavenPom file: 'pom.xml'
+        FILE_NAME = "${POM.artifactId}"
+        TARGET_FILE = "${FILE_NAME}.${FILE_EXT}"
+        
+        configFileProvider([configFile(fileId: 'maven_settings', variable: 'maven_settings')]) {
+            sh "'${MAVEN_HOME}/bin/mvn' ${MVN_OPT} -s $maven_settings -Dintegration-tests.skip=true -Dmaven.test.skip=true clean package"
+        }
+    }
+
+    stage('Archive artifacts') {
+        sh "mkdir -p ${BUILD_REPO}/${BUILD_VERSION};"
+        sh "cp ${WORKSPACE}/target/${TARGET_FILE} ${BUILD_REPO}/${BUILD_VERSION}/"
+    }
+
+    withEnv([
+        "SVR_TYPE=${SVR_TYPE}",
+        "PROJ_KIND=${PROJ_KIND}",
+        "PROJ_NAME=${PROJ_NAME}",
+        "BUILD_VERSION=${BUILD_VERSION}",
+        "BUILD_REPO=${BUILD_REPO}",
+        "FILE_NAME=${FILE_NAME}",
+        "FILE_EXT=${FILE_EXT}",
+        "TARGET_FILE=${TARGET_FILE}"
+    ]) {
+        stage('Make Build Note') {
+            sh "${BUILD_BIN_PATH}/makeBuildNote.sh"
+        }
+    }
+
+    stage('Deploy') {
+        if (env.DEPLOY_YN == 'YES') {
+            if (env.RESTART_SERVER == 'YES') {
+                echo "If the ${TARGET_FILE} file is copied directly to the server, deployment is immediately performed, so stop the server first."
+                sh "sshpass -p ${env.BASE_PW} ssh -p ${env.SSH_PORT} -o StrictHostKeyChecking=no ${SVR_TYPE}@${SVR_IP_01} '${UTILS_PATH}/ebsCtl.sh shutdown ${BIZ_KIND}'" 
+				
+				if (RUN_MODE == "p") {
+					sh "sshpass -p ${env.BASE_PW} ssh -p ${env.SSH_PORT} -o StrictHostKeyChecking=no ${SVR_TYPE}@${SVR_IP_02} '${UTILS_PATH}/ebsCtl.sh shutdown ${BIZ_KIND}'" 
+				}
+            }
+
+            sh "sshpass -p ${env.BASE_PW} ssh -p ${env.SSH_PORT} -o StrictHostKeyChecking=no ${SVR_TYPE}@${SVR_IP_01} 'mkdir -p ${DEPLOY_PATH}'" 
+            sh "sshpass -p ${env.BASE_PW} scp -P ${env.SSH_PORT} -o StrictHostKeyChecking=no ${WORKSPACE}/target/${TARGET_FILE} ${SVR_TYPE}@${SVR_IP_01}:${DEPLOY_PATH}/${TARGET_FILE}"
+            sh "sshpass -p ${env.BASE_PW} scp -P ${env.SSH_PORT} -o StrictHostKeyChecking=no ${BUILD_REPO}/${BUILD_VERSION}/Build-Note.txt ${SVR_TYPE}@${SVR_IP_01}:${DEPLOY_PATH}/Build-Note.txt"
+			
+			if (SVR_TYPE == 'web') {
+				sh "sshpass -p ${env.BASE_PW} ssh -p ${env.SSH_PORT} -o StrictHostKeyChecking=no ${SVR_TYPE}@${SVR_IP_01} '${UTILS_PATH}/ebsCtl.sh --${SVR_TYPE} --${DEPLOY_TYPE} deploy ${BIZ_KIND}'" 
+			}
+        }
+    }
+
+    stage('Restart Server') {
+        if (env.RESTART_SERVER == 'YES') {
+            echo "Restart Wildfly Server(${SVR_IP_01},${SVR_IP_01} - ${PROJ_KIND})"
+            sh "sshpass -p ${env.BASE_PW} ssh -p ${env.SSH_PORT} -o StrictHostKeyChecking=no ${SVR_TYPE}@${SVR_IP_01} '${UTILS_PATH}/ebsCtl.sh start ${BIZ_KIND}'" 
+
+			if (RUN_MODE == "p") {
+				sh "sshpass -p ${env.BASE_PW} ssh -p ${env.SSH_PORT} -o StrictHostKeyChecking=no ${SVR_TYPE}@${SVR_IP_02} '${UTILS_PATH}/ebsCtl.sh start ${BIZ_KIND}'" 
+			}
+        }
+    }   
+}

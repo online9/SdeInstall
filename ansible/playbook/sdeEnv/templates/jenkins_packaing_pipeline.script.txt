@@ -1,0 +1,76 @@
+node {
+    def SVR_TYPE = "${env.SVR_TYPE}"
+    def DOMAIN_NAME = "${env.DOMAIN_NAME}"
+    def BIZ_KIND = "${env.BIZ_KIND}"
+    def PROJ_KIND = "${env.DOMAIN_NAME}-${env.BIZ_KIND}"
+
+	if (env.OP_MODE == 'Online Application') {
+		OP_MODE="o"
+	} else {
+		OP_MODE="m"
+	}
+
+	if (env.RUN_ENV == "Staging") {
+		RUN_MODE="s"
+	} else if (env.RUN_ENV == "Production") {
+		RUN_MODE="p"
+	} else if (env.RUN_ENV == "Development") {
+		RUN_MODE="d"
+	}
+
+    def DEPLOY_TYPE = "partial"
+    def ENGINE_TYPE = "Wildfly"
+    def UTILS_PATH = "/data/utils"
+    def BUILD_BIN_PATH = "/data/build/bin"
+    def BUILD_REPO = "/data/build/${DOMAIN_NAME}/${BIZ_KIND}/${SVR_TYPE}"
+    def DEPLOY_PATH = "/${RUN_MODE}${DOMAIN_NAME}/deploy/${BIZ_KIND}/${SVR_TYPE}"
+
+    load "${BUILD_BIN_PATH}/config/${RUN_MODE}-svn-list.groovy"
+    load "${BUILD_BIN_PATH}/config/${RUN_MODE}-${DOMAIN_NAME}-server-list.groovy"
+
+    def SVR_IP_01 = env."svr_ip_${DOMAIN_NAME}_${BIZ_KIND}_${OP_MODE}_${SVR_TYPE}_01"
+    def SVR_IP_02 = env."svr_ip_${DOMAIN_NAME}_${BIZ_KIND}_${OP_MODE}_${SVR_TYPE}_02"
+
+	if (env.PACKAGE_TYPE == "Full Deploy") {
+		DEPLOY_TYPE = "full"
+	}  
+
+	if (env.SVR_TYPE == 'web') {
+		ENGINE_TYPE = "Apache Httpd"
+	}
+	
+	stage('Package') {
+		sh "${BUILD_BIN_PATH}/makePackage.sh ${BUILD_REPO}" 
+	}
+
+    stage('Deploy') {
+        if (env.DEPLOY_YN == 'YES') {
+            if (env.RESTART_SERVER == 'YES') {
+                echo "If the ${TARGET_FILE} file is copied directly to the server, deployment is immediately performed, so stop the server first."
+                sh "sshpass -p ${env.BASE_PW} ssh -p ${env.SSH_PORT} -o StrictHostKeyChecking=no ${SVR_TYPE}@${SVR_IP_01} '${UTILS_PATH}/ebsCtl.sh shutdown ${BIZ_KIND}'" 
+				
+				if (env.RUN_MODE == "p") {
+					sh "sshpass -p ${env.BASE_PW} ssh -p ${env.SSH_PORT} -o StrictHostKeyChecking=no ${SVR_TYPE}@${SVR_IP_02} '${UTILS_PATH}/ebsCtl.sh shutdown ${BIZ_KIND}'" 
+				}
+            }
+
+            sh "sshpass -p ${env.BASE_PW} ssh -p ${env.SSH_PORT} -o StrictHostKeyChecking=no ${SVR_TYPE}@${SVR_IP_01} 'mkdir -p ${DEPLOY_PATH}'" 
+            sh "sshpass -p ${env.BASE_PW} scp -P ${env.SSH_PORT} -o StrictHostKeyChecking=no ${BUILD_REPO}/${BUILD_VERSION}/* ${SVR_TYPE}@${SVR_IP_01}:${DEPLOY_PATH}/"
+
+			if (SVR_TYPE == 'web') {
+				sh "sshpass -p ${env.BASE_PW} ssh -p ${env.SSH_PORT} -o StrictHostKeyChecking=no ${SVR_TYPE}@${SVR_IP_01} '${UTILS_PATH}/ebsCtl.sh --${SVR_TYPE} --${DEPLOY_TYPE} deploy ${BIZ_KIND}'" 
+			}
+        }
+    }
+
+    stage('Restart Server') {
+        if (env.RESTART_SERVER == 'YES') {
+            echo "Restart Wildfly Server(${SVR_IP_01},${SVR_IP_01} - ${PROJ_KIND})"
+            sh "sshpass -p ${env.BASE_PW} ssh -p ${env.SSH_PORT} -o StrictHostKeyChecking=no ${SVR_TYPE}@${SVR_IP_01} '${UTILS_PATH}/ebsCtl.sh start ${BIZ_KIND}'" 
+
+			if (env.RUN_MODE == "p") {
+				sh "sshpass -p ${env.BASE_PW} ssh -p ${env.SSH_PORT} -o StrictHostKeyChecking=no ${SVR_TYPE}@${SVR_IP_02} '${UTILS_PATH}/ebsCtl.sh start ${BIZ_KIND}'" 
+			}
+        }
+    }   
+}
