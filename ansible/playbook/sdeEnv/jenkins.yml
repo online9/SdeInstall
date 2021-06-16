@@ -7,44 +7,51 @@
       jenkins_admin_username: admin
       jenkins_admin_password: admin
       jenkins_plugins_state: latest
+      jenkins_jobs_upload: true
+
+  - name: Define Jenkins Plugins
+    set_fact:
       jenkins_plugins: 
         - name: "Blue Ocean"
         - name: "Dashboard View"
-        - name: "Folders"
+        - name: "Matrix Project"
+        - name: "Matrix Authorization Strategy"
+        - name: "PAM Authentication"
+        - name: "LDAP"
+        - name: "Role-based Authorization Strategy"
         - name: "OWASP Markup Formatter"
         - name: "Build Timeout"
         - name: "Credentials Binding"
         - name: "Timestamper"
         - name: "Workspace Cleanup"
-        - name: "Ant"
-        - name: "Gradle"
         - name: "Pipeline"
-        - name: "GitHub Branch Source"
-        - name: "Pipeline: GitHub Groovy Libraries"
         - name: "Pipeline: Stage View"
-        - name: "Git"
-        - name: "Subversion"
-        - name: "Matrix Project"
-        - name: "SSH Build Agents"
-        - name: "Matrix Authorization Strategy"
-        - name: "PAM Authentication"
-        - name: "LDAP"
-        - name: "Role-based Authorization Strategy"
-        - name: "Email Extension"
-        - name: "Mailer"
+        - name: "Pipeline: GitHub Groovy Libraries"
+        - name: "Pipeline Maven Integration"
         - name: "Active Choices"
         - name: "Extended Choice Parameter"
         - name: "Extensible Choice Parameter"
-        - name: "Release"
+        - name: "Ant"
+        - name: "Gradle"
+        - name: "Folders"
+        - name: "Git"
+        - name: "GitHub Branch Source"
+        - name: "Subversion"
+        - name: "SSH Build Agents"
         - name: "Publish Over SSH"
+        - name: "Email Extension"
+        - name: "Mailer"
+        - name: "Release"
         - name: "JaCoCo"
         - name: "AnsiColor"
         - name: "SonarQube Scanner"
-        - name: "MSBuild"
-        - name: "PowerShell"
         - name: "Ansible"
         - name: "Ansible Tower"
-        - name: "Pipeline Maven Integration"
+        - name: "MSBuild"
+        - name: "PowerShell"
+
+  - name: Define Jenkins Plugins
+    include_tasks: "jenkins_plugins.yml"
 
   - name: Open Jenkins Http port
     include_tasks: "{{sdePath}}/open_firewall.yml"
@@ -61,3 +68,14 @@
       - "{{ rolesPath }}/geerlingguy.jenkins"
     loop_control:
       loop_var: rolevar
+
+  - name: Download jenkins-cli.jar
+    get_url:
+      url: "http://localhost:{{ jenkins_http_port }}/jnlpJars/jenkins-cli.jar"
+      dest: "{{ jenkins_home }}"
+      owner: jenkins
+      group: jenkins
+
+  - name: Create Jenkins Jobs
+    include_tasks: "jenkins_jobs.yml"
+    when: jenkins_jobs_upload is defined and jenkins_jobs_upload

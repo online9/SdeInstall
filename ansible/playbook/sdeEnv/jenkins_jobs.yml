@@ -1,0 +1,16 @@
+---
+  - set_fact:
+      jenkins_jobs: 
+        - job_id: "Nxf"
+          job_type: "Build"
+          name: "Dashboard View"
+          
+
+  - name: Upload Jenkins Jobs by jenkins-cli.jar
+    get_url:
+      url: "http://localhost:{{ jenkins_http_port }}/jnlpJars/jenkins-cli.jar"
+      dest: "{{ jenkins_home }}"
+      owner: jenkins
+      group: jenkins
+          
+               java -jar {{ jenkins_home }}/jenkins-cli.jar -s http://localhost:8070/ -webSocket create-job 
