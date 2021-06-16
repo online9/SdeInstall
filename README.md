@@ -1,0 +1,2 @@
+# SdeInstall
+Standard Development Environment
