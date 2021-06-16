@@ -1,0 +1,15 @@
+    userName: "maria"
+    dbVersion: "10.3.27-linux-systemd-x86_64"
+
+    dbShellFiles:
+        - "my.sh"
+        - "my_start.sh"
+        - "my_stop.sh"
+    dbConfigFiles:
+        - "my.cnf"
+
+    localDbConfigHome: "{{ configRepoHome }}/db/{{ inventory_hostname }}/conf"
+    remoteDbConfigHome: "/log/{{ userName }}"
+
+    localDbShellHome: "{{ configRepoHome }}/db/{{ inventory_hostname }}/bin"
+    remoteDbShellHome: "/home/{{ userName }}"

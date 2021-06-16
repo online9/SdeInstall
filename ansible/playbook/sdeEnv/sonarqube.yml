@@ -1,0 +1,74 @@
+---
+  - name: Define variables for SonarQube
+    set_fact:
+      postgresql_version: "9.6"
+      postgresql_databases:
+        - name: sonar
+          lc_collate: "ko_KR.UTF-8"
+          lc_ctype: "ko_KR.UTF-8"
+      postgresql_users:
+        - name: sonar
+          password: sonar
+          db: sonar
+      
+  - name: Define variables for SonarQUbe
+    set_fact:
+      sonar_version: 7.9
+      sonar_web_port: 9000
+      sonar_search_port: 9001
+      sonar_user: "sonar"
+      sonar_db_embedded: false
+      sonar_db_user: "sonar"
+      sonar_db_pass: "sonar"
+      sonar_jdbc_url: "jdbc:postgresql://localhost/sonar"
+      sonar_install_directory: /opt
+
+  - name: Define kernel parameters and package dependencies
+    set_fact:
+      packages:
+        - "git"
+        - "unzip"
+      java_packages:
+        - java-11-openjdk
+      def_sysctl_conf:
+        - { name: "vm.max_map_count", value: 262144 }
+        - { name: "fs.file-max", value: 1618107 }
+      def_pam_limits:
+        - { type: "hard", item: "nofile", value: 65535 }
+        - { type: "hard", item: "nproc", value: 65535 }
+        - { type: "soft", item: "nofile", value: 65535 }
+        - { type: "soft", item: "nproc", value: 65535 }
+      port_open: 
+        - { protocol: "tcp", port: "{{ sonar_web_port }}" }
+        - { protocol: "tcp", port: "{{ sonar_search_port }}" }
+
+  - name: Install package dependencies.
+    package:
+      name: "{{ item }}"
+      state: "present"
+    with_items: "{{ packages }}"
+
+  - name: Open SonarQube Http port
+    include_tasks: open_firewall.yml
+    vars:
+      work_name: "SonarQube"
+      port_info: "{{ port_open }}" 
+
+  - name: Modify Kernal Parameters
+    include_tasks: modify_params.yml
+    vars:
+      pam_limits: "{{ def_pam_limits }}"
+      sysctl_conf: "{{ def_sysctl_conf }}"
+
+  - name: Define PostgreSQL Server variables
+    include_tasks: predefine_postgresql.yml
+
+  - name: Install SonarQube Roles
+    include_role: 
+      name: "{{ rolevar }}"
+    loop:
+      - "{{ rolesPath }}/geerlingguy.java"  
+      - "{{ rolesPath }}/geerlingguy.postgresql"   
+      - "{{ rolesPath }}/lrk.sonarqube"
+    loop_control:
+      loop_var: rolevar

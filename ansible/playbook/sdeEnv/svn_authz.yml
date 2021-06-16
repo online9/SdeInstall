@@ -1,0 +1,49 @@
+---
+  - name: Modify SVN Config file for cyrus-sals
+    shell: |
+      sed -i "s/# use-sasl = true/use-sasl = true/" /sde/svn_repos/{{ item.name }}/conf/svnserve.conf
+    with_items: "{{ svn_projects }}"
+    when: use_encrypted_password is defined and use_encrypted_password
+
+  - name: Modify SVN Config file for plain-text password, it is not recommended.
+    shell: |
+       {% for project in item.projects %}
+       {% for user in item.users %}
+       isExist=`cat /sde/svn_repos/{{ project.name }}/conf/passwd | grep "{{ user.username }} ="`
+       if [ "${isExist}" == "" ]; then
+         echo "{{ user.username }} = {{ user.password }}" >> /sde/svn_repos/{{ project.name }}/conf/passwd
+       else
+         sed -i "/{{ user.username }} =/c\{{ user.username }} = {{ user.password }}" /sde/svn_repos/{{ project.name }}/conf/passwd
+       fi
+       {% endfor %}
+       {% endfor %}
+    with_items: 
+      - { projects: "{{ svn_projects }}", users: "{{ svn_users }}" }
+    when: use_encrypted_password is not defined or not use_encrypted_password
+
+  - name: Copy a new svn "authz" file into place, backing up the original if it differs from the copied version
+    ansible.builtin.copy:
+      src: "{{ sdePath }}/templates/svn_authz.j2"
+      dest: "/sde/svn_repos/{{ item.name }}/conf/authz"
+      remote_src: no
+      backup: yes
+    with_items: 
+      - "{{ svn_projects }}"
+
+  - name: Modify SVN Users and Repositories mappings
+    shell: |
+       {% for group in item.groups %}
+       echo "{{ group.name }} = {{ group.users }}" >> "/sde/svn_repos/{{ item.name }}/conf/authz"
+       {% endfor %}
+       echo " " >> "/sde/svn_repos/{{ item.name }}/conf/authz"
+       {% for auth in item.authz %}
+       echo "[{{ auth.path }}]" >> "/sde/svn_repos/{{ item.name }}/conf/authz"
+       {% for maps in auth.default_mapping %}
+       echo "{{ maps.name }} = {{ maps.rights }}" >> "/sde/svn_repos/{{ item.name }}/conf/authz"
+       {% endfor %}
+       {% for maps in auth.mappings %}
+       echo "{{ maps.name }} = {{ maps.rights }}" >> "/sde/svn_repos/{{ item.name }}/conf/authz"
+       {% endfor %}
+       {% endfor %}
+    with_items: 
+      - "{{ svn_projects }}"

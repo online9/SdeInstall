@@ -1,0 +1,55 @@
+---
+  - name: Define SubVersion Variables
+    set_fact:
+      app_name: "svnserve"
+      domain_name: "nxf"
+      subversion_port: "3690"
+      subversion_path: "/sde/svn_repos"
+      use_encrypted_password: false
+
+  - name: Define SVN Users/Groups, Porjects and Mappings
+    include_tasks: "svn_users.yml"
+
+  - name: Define SubVersion Repositories
+    set_fact:
+      subversion_repositories: "{{ subversion_repositories|default([]) + [ { 'name': item.name } ] }}"
+    with_items: "{{ svn_projects }}"
+
+  - name: Open SubVersion Http port
+    include_tasks: "{{sdePath}}/open_firewall.yml"
+    vars:
+      work_name: "SubVersion"
+      port_info: 
+        - { protocol: "tcp", port: "{{ subversion_port }}" }
+
+  - name: Make Repo Directory
+    file:
+      path: "{{ subversion_path }}"
+      state: directory
+      recurse: yes
+
+  - name: Install SubVersion Roles
+    include_role: 
+      name: "{{ rolevar }}"
+    loop:
+      - "{{ rolesPath }}/robertdebock.subversion"  
+    loop_control:
+      loop_var: rolevar
+
+  - name: Modify SVN Config file
+    shell: |
+      sed -i "/OPTIONS=/c\OPTIONS=\"--threads --root {{ subversion_path }}\"" /etc/sysconfig/svnserve
+
+  - name: Create Users/Group Authz, Process Encrypted Password by Cyrus-Sasl 
+    include_tasks: svn_authz.yml
+
+  - name: systemctl restart svnserve.service
+    service:
+      name: "svnserve.service"
+      state: "restarted"
+      enabled: true
+    changed_when: false
+    ignore_errors: true
+
+  - name: Change Context SELinux config for SvnServe
+    shell: "chcon -R -t svnserve_content_t {{ subversion_path }}"

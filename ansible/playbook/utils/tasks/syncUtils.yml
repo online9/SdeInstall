@@ -1,0 +1,15 @@
+- hosts: "{{ targetServers }}"
+  vars:
+    playbookHome: "/data/utils/ansible/playbook"
+
+  tasks:
+    - name: Synchronization /data/utils using rsync protocol (push)
+      ansible.posix.synchronize:
+        src: /data/utils/
+        dest: /data/utils/
+        rsync_opts:
+          - "--exclude=.settings"
+          - "--exclude=.project"
+          - "--exclude=downloads"
+          - "--exclude=monitoring"
+

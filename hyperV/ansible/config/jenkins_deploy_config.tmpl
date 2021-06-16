@@ -1,0 +1,343 @@
+<?xml version='1.1' encoding='UTF-8'?>
+<flow-definition plugin="workflow-job@2.40">
+  <actions/>
+  <description>EBS %{JOB_TITLE} Deploy And Restart Server</description>
+  <keepDependencies>false</keepDependencies>
+  <properties>
+    <hudson.security.AuthorizationMatrixProperty>
+      <inheritanceStrategy class="org.jenkinsci.plugins.matrixauth.inheritance.InheritParentStrategy"/>
+      <permission>hudson.model.Item.Build:ebs%{DOMAIN_NAME}</permission>
+      <permission>hudson.model.Item.Configure:ebs%{DOMAIN_NAME}</permission>
+      <permission>hudson.model.Item.Read:ebs%{DOMAIN_NAME}</permission>
+    </hudson.security.AuthorizationMatrixProperty>
+    <jenkins.model.BuildDiscarderProperty>
+      <strategy class="hudson.tasks.LogRotator">
+        <daysToKeep>10</daysToKeep>
+        <numToKeep>30</numToKeep>
+        <artifactDaysToKeep>1</artifactDaysToKeep>
+        <artifactNumToKeep>10</artifactNumToKeep>
+      </strategy>
+    </jenkins.model.BuildDiscarderProperty>
+    <hudson.model.ParametersDefinitionProperty>
+      <parameterDefinitions>
+        <hudson.model.ChoiceParameterDefinition>
+          <name>DEPLOY_YN</name>
+          <description>&lt;b style=&quot;font-size:1.2em;color:red&quot;&gt;Deploy 유무, Server만 재기동시 NO 선택&lt;/b&gt;</description>
+          <choices class="java.util.Arrays$ArrayList">
+            <a class="string-array">
+              <string>YES</string>
+              <string>NO</string>
+            </a>
+          </choices>
+        </hudson.model.ChoiceParameterDefinition>
+        <hudson.model.ChoiceParameterDefinition>
+          <name>RESTART_SERVER</name>
+          <description>&lt;b style=&quot;font-size:1.2em;color:red&quot;&gt;서버 재기동 유무, 빌드후 Deploy를 함께 진행시 서버를 중단하고 재시작하도록 함&lt;/b&gt;</description>
+          <choices class="java.util.Arrays$ArrayList">
+            <a class="string-array">
+              <string>NO</string>
+              <string>YES</string>
+            </a>
+          </choices>
+        </hudson.model.ChoiceParameterDefinition>
+        <org.biouno.unochoice.ChoiceParameter plugin="uno-choice@2.5.1">
+          <name>RUN_ENV</name>
+          <description>&lt;b style=&quot;font-size:1.2em;color:blue&quot;&gt;테스트 및 운영 대상 환경 선택&lt;/b&gt;</description>
+          <randomName>choice-parameter-316285851504334</randomName>
+          <visibleItemCount>1</visibleItemCount>
+          <script class="org.biouno.unochoice.model.GroovyScript">
+            <secureScript plugin="script-security@1.76">
+              <script>return [&quot;Production&quot;, &quot;Staging&quot;, &quot;Development&quot;] </script>
+              <sandbox>false</sandbox>
+            </secureScript>
+            <secureFallbackScript plugin="script-security@1.76">
+              <script></script>
+              <sandbox>false</sandbox>
+            </secureFallbackScript>
+          </script>
+          <projectName>Deploy-%{JOB_ID}</projectName>
+          <projectFullName>Deploy-%{JOB_ID}</projectFullName>
+          <choiceType>PT_SINGLE_SELECT</choiceType>
+          <filterable>false</filterable>
+          <filterLength>1</filterLength>
+        </org.biouno.unochoice.ChoiceParameter>
+        <org.biouno.unochoice.ChoiceParameter plugin="uno-choice@2.5.1">
+          <name>SVR_TYPE</name>
+          <description>&lt;b style=&quot;font-size:1.2em;color:orange&quot;&gt;배포 대상 서버 용도, WAS/WEB중 하나를 선택&lt;/b&gt;</description>
+          <randomName>choice-parameter-8547905934661680</randomName>
+          <visibleItemCount>1</visibleItemCount>
+          <script class="org.biouno.unochoice.model.GroovyScript">
+            <secureScript plugin="script-security@1.76">
+              <script>return [&quot;was:selected&quot;, &quot;web&quot;]</script>
+              <sandbox>false</sandbox>
+            </secureScript>
+            <secureFallbackScript plugin="script-security@1.76">
+              <script></script>
+              <sandbox>false</sandbox>
+            </secureFallbackScript>
+          </script>
+          <projectName>Deploy-%{JOB_ID}</projectName>
+          <projectFullName>Deploy-%{JOB_ID}</projectFullName>
+          <choiceType>PT_SINGLE_SELECT</choiceType>
+          <filterable>false</filterable>
+          <filterLength>1</filterLength>
+        </org.biouno.unochoice.ChoiceParameter>
+        <org.biouno.unochoice.CascadeChoiceParameter plugin="uno-choice@2.5.1">
+          <name>DOMAIN_NAME</name>
+          <description>&lt;b style=&quot;font-size:1.2em;color:green&quot;&gt;배포 대상 업무 분류중 하나를 선택&lt;/b&gt;</description>
+          <randomName>choice-parameter-314106397341449</randomName>
+          <visibleItemCount>1</visibleItemCount>
+          <script class="org.biouno.unochoice.model.GroovyScript">
+            <secureScript plugin="script-security@1.76">
+              <script>return [&quot;%{DOMAIN_NAME}&quot;]</script>
+              <sandbox>false</sandbox>
+            </secureScript>
+            <secureFallbackScript plugin="script-security@1.76">
+              <script></script>
+              <sandbox>false</sandbox>
+            </secureFallbackScript>
+          </script>
+          <projectName>Deploy-%{JOB_ID}</projectName>
+          <projectFullName>Deploy-%{JOB_ID}</projectFullName>
+          <parameters class="linked-hash-map"/>
+          <referencedParameters></referencedParameters>
+          <choiceType>PT_SINGLE_SELECT</choiceType>
+          <filterable>false</filterable>
+          <filterLength>1</filterLength>
+        </org.biouno.unochoice.CascadeChoiceParameter>
+        <org.biouno.unochoice.CascadeChoiceParameter plugin="uno-choice@2.5.1">
+          <name>BIZ_KIND</name>
+          <description>&lt;b style=&quot;font-size:1.2em;color:green&quot;&gt;배포 대상 업무구분중 하나를 선택&lt;/b&gt;</description>
+          <randomName>choice-parameter-2320688431854394</randomName>
+          <visibleItemCount>1</visibleItemCount>
+          <script class="org.biouno.unochoice.model.GroovyScript">
+            <secureScript plugin="script-security@1.76">
+              <script>if (SVR_TYPE == &quot;was&quot;) {
+    return &quot;%{WAS_LIST}&quot;.split(&apos;,&apos;).collect{it as String}
+} else {
+    return &quot;%{WEB_LIST}&quot;.split(&apos;,&apos;).collect{it as String}
+}</script>
+              <sandbox>false</sandbox>
+            </secureScript>
+            <secureFallbackScript plugin="script-security@1.76">
+              <script></script>
+              <sandbox>false</sandbox>
+            </secureFallbackScript>
+          </script>
+          <projectName>Deploy-%{JOB_ID}</projectName>
+          <projectFullName>Deploy-%{JOB_ID}</projectFullName>
+          <parameters class="linked-hash-map"/>
+          <referencedParameters>SVR_TYPE</referencedParameters>
+          <choiceType>PT_SINGLE_SELECT</choiceType>
+          <filterable>false</filterable>
+          <filterLength>1</filterLength>
+        </org.biouno.unochoice.CascadeChoiceParameter>
+        <org.biouno.unochoice.ChoiceParameter plugin="uno-choice@2.5.1">
+          <name>OP_MODE</name>
+          <description>&lt;b style=&quot;font-size:1.2em;color:blue&quot;&gt;Application 종류, Online/Management&lt;/b&gt;</description>
+          <randomName>choice-parameter-2235221154569381</randomName>
+          <visibleItemCount>1</visibleItemCount>
+          <script class="org.biouno.unochoice.model.GroovyScript">
+            <secureScript plugin="script-security@1.76">
+              <script>return [&quot;Online Application&quot;, &quot;Management Application&quot;]</script>
+              <sandbox>false</sandbox>
+            </secureScript>
+            <secureFallbackScript plugin="script-security@1.76">
+              <script></script>
+              <sandbox>false</sandbox>
+            </secureFallbackScript>
+          </script>
+          <projectName>Deploy-%{JOB_ID}</projectName>
+          <projectFullName>Deploy-%{JOB_ID}</projectFullName>
+          <choiceType>PT_SINGLE_SELECT</choiceType>
+          <filterable>false</filterable>
+          <filterLength>1</filterLength>
+        </org.biouno.unochoice.ChoiceParameter>
+        <org.biouno.unochoice.CascadeChoiceParameter plugin="uno-choice@2.5.1">
+          <name>DEPLOY_TYPE</name>
+          <description>&lt;b style=&quot;font-size:1.2em;color:red&quot;&gt;대상 빌드 버전의 파일을 서버에 Deploy하는 방법을 선택&lt;/b&gt;</description>
+          <randomName>choice-parameter-314797583323165</randomName>
+          <visibleItemCount>1</visibleItemCount>
+          <script class="org.biouno.unochoice.model.GroovyScript">
+            <secureScript plugin="script-security@1.76">
+              <script>if (SVR_TYPE == &quot;web&quot;)  {
+    return [&quot;Full Deploy&quot;, &quot;Partial-Changed File Only&quot;]
+}
+
+return [&quot;Full Deploy&quot;]</script>
+              <sandbox>false</sandbox>
+            </secureScript>
+            <secureFallbackScript plugin="script-security@1.76">
+              <script></script>
+              <sandbox>false</sandbox>
+            </secureFallbackScript>
+          </script>
+          <projectName>Deploy-%{JOB_ID}</projectName>
+          <projectFullName>Deploy-%{JOB_ID}</projectFullName>
+          <parameters class="linked-hash-map"/>
+          <referencedParameters>SVR_TYPE</referencedParameters>
+          <choiceType>PT_SINGLE_SELECT</choiceType>
+          <filterable>false</filterable>
+          <filterLength>1</filterLength>
+        </org.biouno.unochoice.CascadeChoiceParameter>
+        <org.biouno.unochoice.CascadeChoiceParameter plugin="uno-choice@2.5.1">
+          <name>BUILD_VERSION</name>
+          <description>&lt;b style=&quot;font-size:1.2em;color:blue&quot;&gt;서버에 Deploy 대상 빌드 번호를 선택&lt;/b&gt;</description>
+          <randomName>choice-parameter-306993361462403</randomName>
+          <visibleItemCount>1</visibleItemCount>
+          <script class="org.biouno.unochoice.model.GroovyScript">
+            <secureScript plugin="script-security@1.76">
+              <script>import groovy.io.*
+
+def listDirs(dir) {
+        dlist = []
+        new File(dir).eachDir { dlist &lt;&lt; it.name }
+        dlist.sort()
+        Collections.reverse(dlist)
+        return dlist.flatten()
+}
+
+return listDirs(&quot;/data/build/&quot; + DOMAIN_NAME + &quot;/&quot; + BIZ_KIND + &quot;/&quot; + SVR_TYPE)
+</script>
+              <sandbox>false</sandbox>
+            </secureScript>
+            <secureFallbackScript plugin="script-security@1.76">
+              <script></script>
+              <sandbox>false</sandbox>
+            </secureFallbackScript>
+          </script>
+          <projectName>Deploy-%{JOB_ID}</projectName>
+          <projectFullName>Deploy-%{JOB_ID}</projectFullName>
+          <parameters class="linked-hash-map"/>
+          <referencedParameters>SVR_TYPE, DOMAIN_NAME, BIZ_KIND</referencedParameters>
+          <choiceType>PT_SINGLE_SELECT</choiceType>
+          <filterable>false</filterable>
+          <filterLength>1</filterLength>
+        </org.biouno.unochoice.CascadeChoiceParameter>
+        <org.biouno.unochoice.DynamicReferenceParameter plugin="uno-choice@2.5.1">
+          <name>BUILD_NOTE</name>
+          <description>&lt;b style=&quot;font-size:1.2em;color:blue&quot;&gt;선택된 Build Version에 대한 상세 정보를 표시&lt;/b&gt;</description>
+          <randomName>choice-parameter-309014128731008</randomName>
+          <visibleItemCount>1</visibleItemCount>
+          <script class="org.biouno.unochoice.model.GroovyScript">
+            <secureScript plugin="script-security@1.76">
+              <script>import groovy.io.*
+
+def readFileLineByLine(String filePath) {
+    def line
+    def result = &quot;&quot;
+    def isPrint = false
+    File file = new File(filePath)
+    file.withReader { reader -&gt;
+        while ((line = reader.readLine()) != null) {
+            if (line == &quot;This Build notes contain the following&quot;) {
+                return result
+            }
+
+            if (line.startsWith(&quot;Build Title&quot;)) {
+                isPrint = true
+            }
+
+            if (isPrint) {
+                result += line + &quot;&lt;br&gt;&quot;
+            }
+        }
+    }
+
+     return result
+}
+
+return readFileLineByLine(&quot;/data/build/&quot; + DOMAIN_NAME+ &quot;/&quot; + BIZ_KIND+ &quot;/&quot; + SVR_TYPE + &quot;/&quot; + BUILD_VERSION + &quot;/Build-Note.txt&quot;)
+</script>
+              <sandbox>false</sandbox>
+            </secureScript>
+            <secureFallbackScript plugin="script-security@1.76">
+              <script></script>
+              <sandbox>false</sandbox>
+            </secureFallbackScript>
+          </script>
+          <projectName>Deploy-%{JOB_ID}</projectName>
+          <projectFullName>Deploy-%{JOB_ID}</projectFullName>
+          <parameters class="linked-hash-map"/>
+          <referencedParameters>SVR_TYPE,DOMAIN_NAME,BIZ_KIND,BUILD_VERSION</referencedParameters>
+          <choiceType>ET_FORMATTED_HTML</choiceType>
+          <omitValueField>false</omitValueField>
+        </org.biouno.unochoice.DynamicReferenceParameter>
+      </parameterDefinitions>
+    </hudson.model.ParametersDefinitionProperty>
+  </properties>
+  <definition class="org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition" plugin="workflow-cps@2.87">
+    <script>node {
+    def SVR_TYPE = &quot;${env.SVR_TYPE}&quot;
+    def DOMAIN_NAME = &quot;${env.DOMAIN_NAME}&quot;
+    def BIZ_KIND = &quot;${env.BIZ_KIND}&quot;
+    def PROJ_KIND = &quot;${env.DOMAIN_NAME}-${env.BIZ_KIND}&quot;
+
+    if (env.OP_MODE == &apos;Online Application&apos;) {
+        OP_MODE=&quot;o&quot;
+    } else {
+        OP_MODE=&quot;m&quot;
+    }
+
+    if (env.RUN_ENV == &quot;Staging&quot;) {
+        RUN_MODE=&quot;s&quot;
+    } else if (env.RUN_ENV == &quot;Production&quot;) {
+        RUN_MODE=&quot;p&quot;
+    } else if (env.RUN_ENV == &quot;Development&quot;) {
+        RUN_MODE=&quot;d&quot;
+    }
+
+    def DEPLOY_TYPE = &quot;partial&quot;
+    def ENGINE_TYPE = &quot;Wildfly&quot;
+    def UTILS_PATH = &quot;/data/utils&quot;
+    def BUILD_BIN_PATH = &quot;/data/build/bin&quot;
+    def BUILD_REPO = &quot;/data/build/${DOMAIN_NAME}/${BIZ_KIND}/${SVR_TYPE}&quot;
+    def DEPLOY_PATH = &quot;/${RUN_MODE}${DOMAIN_NAME}/deploy/${BIZ_KIND}/${SVR_TYPE}&quot;
+
+    load &quot;${BUILD_BIN_PATH}/config/${RUN_MODE}-svn-list.groovy&quot;
+    load &quot;${BUILD_BIN_PATH}/config/${RUN_MODE}-${DOMAIN_NAME}-server-list.groovy&quot;
+
+    def SVR_IP_01 = env.&quot;svr_ip_${DOMAIN_NAME}_${BIZ_KIND}_${OP_MODE}_${SVR_TYPE}_01&quot;
+    def SVR_IP_02 = env.&quot;svr_ip_${DOMAIN_NAME}_${BIZ_KIND}_${OP_MODE}_${SVR_TYPE}_02&quot;
+
+        if (env.DEPLOY_TYPE == &quot;Full Deploy&quot;) {
+            DEPLOY_TYPE = &quot;full&quot;
+        }
+
+    stage(&apos;Deploy&apos;) {
+        if (env.DEPLOY_YN == &apos;YES&apos;) {
+            if (env.RESTART_SERVER == &apos;YES&apos;) {
+                sh &quot;sshpass -p ${env.BASE_PW} ssh -p ${env.SSH_PORT} -o StrictHostKeyChecking=no ${SVR_TYPE}@${SVR_IP_01} &apos;${UTILS_PATH}/ebsCtl.sh shutdown ${BIZ_KIND}&apos;&quot;
+
+                if (RUN_MODE == &quot;p&quot;) {
+                    sh &quot;sshpass -p ${env.BASE_PW} ssh -p ${env.SSH_PORT} -o StrictHostKeyChecking=no ${SVR_TYPE}@${SVR_IP_02} &apos;${UTILS_PATH}/ebsCtl.sh shutdown ${BIZ_KIND}&apos;&quot;
+                }
+            }
+
+            sh &quot;sshpass -p ${env.BASE_PW} ssh -p ${env.SSH_PORT} -o StrictHostKeyChecking=no ${SVR_TYPE}@${SVR_IP_01} &apos;mkdir -p ${DEPLOY_PATH}&apos;&quot;
+            sh &quot;sshpass -p ${env.BASE_PW} scp -P ${env.SSH_PORT} -o StrictHostKeyChecking=no ${BUILD_REPO}/${BUILD_VERSION}/* ${SVR_TYPE}@${SVR_IP_01}:${DEPLOY_PATH}/&quot;
+
+            if (SVR_TYPE == &apos;web&apos;) {
+                sh &quot;sshpass -p ${env.BASE_PW} ssh -p ${env.SSH_PORT} -o StrictHostKeyChecking=no ${SVR_TYPE}@${SVR_IP_01} &apos;${UTILS_PATH}/ebsCtl.sh --${SVR_TYPE} --${DEPLOY_TYPE} deploy ${BIZ_KIND}&apos;&quot;
+                sh &quot;sshpass -p ${env.BASE_PW} ssh -p ${env.SSH_PORT} -o StrictHostKeyChecking=no ${SVR_TYPE}@${SVR_IP_02} &apos;${UTILS_PATH}/ebsCtl.sh --${SVR_TYPE} --${DEPLOY_TYPE} deploy ${BIZ_KIND}&apos;&quot;
+            }
+        }
+    }
+
+    stage(&apos;Restart Server&apos;) {
+        if (env.RESTART_SERVER == &apos;YES&apos;) {
+            echo &quot;Restart Wildfly Server(${SVR_IP_01},${SVR_IP_01} - ${PROJ_KIND})&quot;
+            sh &quot;sshpass -p ${env.BASE_PW} ssh -p ${env.SSH_PORT} -o StrictHostKeyChecking=no ${SVR_TYPE}@${SVR_IP_01} &apos;${UTILS_PATH}/ebsCtl.sh start ${BIZ_KIND}&apos;&quot;
+
+            if (RUN_MODE == &quot;p&quot;) {
+                sh &quot;sshpass -p ${env.BASE_PW} ssh -p ${env.SSH_PORT} -o StrictHostKeyChecking=no ${SVR_TYPE}@${SVR_IP_02} &apos;${UTILS_PATH}/ebsCtl.sh start ${BIZ_KIND}&apos;&quot;
+            }
+        }
+    }
+}
+</script>
+    <sandbox>true</sandbox>
+  </definition>
+  <triggers/>
+  <disabled>false</disabled>
+</flow-definition>

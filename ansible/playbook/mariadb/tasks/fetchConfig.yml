@@ -1,0 +1,14 @@
+  - name: Create Local MariaDB Config directory
+    file:
+      path: "{{ localDbConfigHome }}"
+      state: directory
+      recurse: yes
+    delegate_to: localhost
+
+  - name: Fetch MaraiDB Config File
+    become: yes
+    ansible.builtin.fetch:
+        src: "{{ remoteDbConfigHome }}/{{ item }}"
+        dest: "{{ localDbConfigHome }}/{{ item }}"
+        flat: yes
+    with_items: "{{ dbConfigFiles }}"

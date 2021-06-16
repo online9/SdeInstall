@@ -1,0 +1,63 @@
+---
+  - name: Define Jenkins Variables
+    set_fact:
+      jenkins_prefer_lts: true
+      jenkins_http_port: 8070
+      jenkins_home: "/var/lib/jenkins"
+      jenkins_admin_username: admin
+      jenkins_admin_password: admin
+      jenkins_plugins_state: latest
+      jenkins_plugins: 
+        - name: "Blue Ocean"
+        - name: "Dashboard View"
+        - name: "Folders"
+        - name: "OWASP Markup Formatter"
+        - name: "Build Timeout"
+        - name: "Credentials Binding"
+        - name: "Timestamper"
+        - name: "Workspace Cleanup"
+        - name: "Ant"
+        - name: "Gradle"
+        - name: "Pipeline"
+        - name: "GitHub Branch Source"
+        - name: "Pipeline: GitHub Groovy Libraries"
+        - name: "Pipeline: Stage View"
+        - name: "Git"
+        - name: "Subversion"
+        - name: "Matrix Project"
+        - name: "SSH Build Agents"
+        - name: "Matrix Authorization Strategy"
+        - name: "PAM Authentication"
+        - name: "LDAP"
+        - name: "Role-based Authorization Strategy"
+        - name: "Email Extension"
+        - name: "Mailer"
+        - name: "Active Choices"
+        - name: "Extended Choice Parameter"
+        - name: "Extensible Choice Parameter"
+        - name: "Release"
+        - name: "Publish Over SSH"
+        - name: "JaCoCo"
+        - name: "AnsiColor"
+        - name: "SonarQube Scanner"
+        - name: "MSBuild"
+        - name: "PowerShell"
+        - name: "Ansible"
+        - name: "Ansible Tower"
+        - name: "Pipeline Maven Integration"
+
+  - name: Open Jenkins Http port
+    include_tasks: "{{sdePath}}/open_firewall.yml"
+    vars:
+      work_name: "Jenkins"
+      port_info:
+        - { protocol: "tcp", port: "{{ jenkins_http_port }}" }
+
+  - name: Install Jenkins Roles
+    include_role:
+      name: "{{ rolevar }}"
+    loop:
+      - "{{ rolesPath }}/geerlingguy.java"
+      - "{{ rolesPath }}/geerlingguy.jenkins"
+    loop_control:
+      loop_var: rolevar

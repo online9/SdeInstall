@@ -1,0 +1,13 @@
+    docRoot: "/docroot"
+    serverHome: "/svr"
+    engineHome: "{{ serverHome }}/engines"
+
+    configRepoHome: "/data/config"
+    downloadsHome: "/data/utils/downloads"
+
+    serverPrefix: "P-{{ domain_name | upper }}-{{ biz_kind | upper }}"
+
+    appType: "{{ '-O' if app_type == 'o' else '-M' if app_type == 'm' else '' }}"
+    instanceId: "{{ serverPrefix }}{{ appType }}-{{ server_type | upper }}-01" 
+
+    tasksHome: "{{ playbookHome }}/{{ targetServerName }}/tasks"

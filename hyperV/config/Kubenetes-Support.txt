@@ -1,0 +1,61 @@
+# howToCreateVm
+# 0 : Same Type   => Enter the Start IP and hostname pattern.
+# 1 : Custom Type => Enter the IP and hostname list directly."
+[General]
+howToCreateVm=0
+totalVm=1
+baseOsName=BaseVm-CentOS7.9
+processorCount=8
+vmGeneration=2
+vmBasePath=M:\Hyper-V_BaseVM
+targetVmPath=I:\Hyper-V_Kubenetes
+resetShellFilePath=../shell/
+resetShellFile=resetHost.sh
+startUp=yes
+pingTest=yes
+
+[Ansible]
+addAnsibleHost=yes
+addAnsibleHostPath=../ansible/hosts
+addAnsibleHostFile=SdeSupport.ini
+addAnsibleHostGroup=SdeSupport
+# Instead of the '=', use ':', Finally, ':' is replaced with the '='.
+addAnsibleHostOptions=server_name:%{hostNameTemplate} server_type:%{hostTypeTemplate}
+
+[Memory:MB]
+vmMemorySize=512
+dynamicMemoryEnabled=true
+dynamicStartupBytes=8192
+dynamicMinimumBytes=4096
+dynamicMaximumBytes=8192
+
+#ipRange
+# 1 : 10.0.0.0    ~ 10.255.255.255
+# 2 : 172.16.0.0  ~ 172.31.255.255
+# 3 : 192.168.0.0 ~ 192.168.255.255
+[Network]
+preset=no
+ipRange=2
+switchName=Kube-VirtualSwitch
+baseVmIp=172.16.7.9
+startIp=172.18.0.8
+netmask=255.240.0.0
+gatewayIp=172.16.0.1
+dns1=8.8.8.8
+dns2=
+mtu=9000
+search=online9.com
+
+[Host]
+hostNamePrefix=sde
+#hostNameTemplate=awx,gitlab,gerrit,redmine,jenkins,sonarqube,nexus,mon
+#hostTypeTemplate=ansible,scm,codereview,issue,cicd,stat,repo,mon
+#vmNameTemplate=SdeAwx,SdeScm,SdeCodeReview,SdeIssue,SdeCi,SdeStat,SdeRepo,SdeMon
+hostNameTemplate=mon
+hostTypeTemplate=mon
+vmNameTemplate=SdeMon
+
+[User]
+user=root
+password=vfp60cap@622527
+

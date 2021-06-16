@@ -1,0 +1,52 @@
+---
+- hosts: "{{ targetServers }}"
+
+  vars:
+    ansiblePath: "{{ ansiblePath }}"
+    rolesPath: "{{ ansiblePath }}/roles"
+    sdePath: "{{ ansiblePath }}/playbook/sdeEnv"
+
+  tasks:
+    - name: Install Awx Server
+      include_tasks: awx.yml
+      when: server_name is match(".*awx")
+      
+    - name: Install Svn Server
+      include_tasks: svn.yml
+      when: server_name is match(".*svn")
+
+    - name: Install SubVersion Server
+      include_tasks: subversion.yml
+      when: server_name is match(".*subversion")
+
+    - name: Install GitLab Server
+      include_tasks: gitlab.yml
+      when: server_name is match(".*gitlab") 
+
+    - name: Install Gerrit Server
+      include_tasks: gerrit.yml
+      when: server_name is match(".*gerrit")
+
+    - name: Install Jenkins Server
+      include_tasks: jenkins.yml
+      when: server_name is match(".*jenkins")
+
+    - name: Install SonarQube Server
+      include_tasks: sonarqube.yml
+      when: server_name is match(".*sonarqube")
+
+    - name: Install RedMine Server
+      include_tasks: redmine.yml
+      when: server_name is match(".*redmine")
+
+    - name: Install Nexus Server
+      include_tasks: nexus.yml
+      when: server_name is match(".*nexus")
+
+    - name: Install Influx Server
+      include_tasks: influx.yml
+      when: server_name is match(".*influx")
+
+    - name: Install Grafana Server
+      include_tasks: grafana.yml
+      when: server_name is match(".*grafana")

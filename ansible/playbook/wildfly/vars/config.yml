@@ -1,0 +1,51 @@
+    wasHome: "/data/was"
+    wasBinHome: "{{ wasHome }}/bin"
+    wasConfigHome: "{{ wasHome }}/configuration"
+    deploymentsHome: "{{ wasHome }}/deployments"
+
+    remoteWasHome: "/data/servers/was"
+
+    wasName: "wildfly"
+    wasVersion: "14.0.1.Final"
+
+    wasFolders: 
+        - "bin"
+        - "configuration"
+        - "data"
+        - "lib/ext"
+        - "tmp"
+    wasShellFiles:
+        - "add-user.sh"
+        - "dump.sh"
+        - "enc_ds.sh"
+        - "env.properties"
+        - "env.sh"
+        - "jboss-cli.sh"
+        - "jconsole.sh"
+        - "jdr.sh"
+        - "kill.sh"
+        - "shutdown.sh"
+        - "start.sh"
+        - "status.sh"
+        - "tail.sh"
+    wasConfigFiles:
+        - "application-roles.properties"
+        - "application-users.properties"
+        - "logging.properties"
+        - "mgmt-groups.properties"
+        - "mgmt-users.properties"
+#        - "standalone-load-balancer.xml"
+#        - "standalone-full-ha.xml"
+#        - "standalone-full.xml"
+
+    wasConfigFilesForOnline:
+        - "standalone.xml"
+
+    wasConfigFilesForMgmt:
+        - "standalone-ha.xml"
+
+    localWasConfigHome: "{{ configRepoHome }}/was/{{ inventory_hostname }}/configuration"
+    remoteWasConfigHome: "{{ remoteWasHome }}/{{ serverPrefix }}/{{ instanceId }}/configuration"
+
+    localWasShellHome: "{{ configRepoHome }}/was/{{ inventory_hostname }}/bin"
+    remoteWasShellHome: "{{ remoteWasHome }}/{{ serverPrefix }}/{{ instanceId }}/bin"

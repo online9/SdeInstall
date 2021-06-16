@@ -1,0 +1,22 @@
+- hosts: "{{ targetServers }}"
+  vars:
+    targetServerName: "wildfly"
+    playbookHome: "/data/utils/ansible/playbook"
+
+  vars_files:
+     - "{{ playbookHome }}/common/common.yml"
+     - "{{ playbookHome }}/{{ targetServerName }}/vars/config.yml"
+
+  tasks:
+    - name: Create Was(JBoss Wildfly) Config/Shell Folder
+      delegate_to: localhost
+      file:
+        path: "{{configRepoHome }}/{{ item }}"
+        state: directory
+        mode: 0755
+        recurse: yes
+      with_items: 
+        - "was"
+
+    - include: "{{ tasksHome }}/fetchConfig.yml" 
+    - include: "{{ tasksHome }}/fetchShell.yml"

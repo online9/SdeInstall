@@ -1,0 +1,58 @@
+    - community.general.pam_limits:
+        domain: root
+        limit_type: hard
+        limit_item: nofile
+        value: 65535
+
+    - community.general.pam_limits:
+        domain: root
+        limit_type: soft
+        limit_item: nofile
+        value: 65535
+
+    - community.general.pam_limits:
+        domain: root
+        limit_type: hard
+        limit_item: nproc
+        value: 65535
+
+    - community.general.pam_limits:
+        domain: root
+        limit_type: soft
+        limit_item: nproc
+        value: 65535
+    
+    - name: Put SELinux in permissive mode, logging actions that would be blocked.
+      ansible.posix.selinux:
+        policy: targeted
+        state: permissive
+
+    - ansible.posix.sysctl:
+        name: vm.overcommit_memory
+        value: '1'
+        state: present
+    
+    - ansible.posix.sysctl:
+        name: net.core.somaxconn
+        value: '65535'
+        state: present
+
+    - ansible.posix.sysctl:
+        name: vm.max_map_count
+        value: '262144'
+        state: present
+
+    - ansible.posix.sysctl:
+        name: vm.swappiness
+        value: '1'
+        state: present
+
+    - name: Append HugePage
+      shell: echo never > /sys/kernel/mm/transparent_hugepage/enabled
+
+    - ansible.posix.firewalld:
+        zone: public
+        port: 6379-6382/udp
+        permanent: yes
+        state: enabled
+        immediate: true

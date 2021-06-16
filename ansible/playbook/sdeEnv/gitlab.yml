@@ -1,0 +1,26 @@
+---
+  - name: Define GitLab Variables
+    set_fact:
+      gitlab_http_port: "80"
+      gitlab_nginx_listen_port: "8080"
+
+  - name: Define GitLab Variables
+    set_fact:
+      gitlab_external_url: "{{ ansible_host }}:{{ gitlab_nginx_listen_port }}"
+
+  - name: Open SVN Http port
+    include_tasks: "{{sdePath}}/open_firewall.yml"
+    vars:
+      work_name: "GitLab"
+      port_info:
+        - { protocol: "http", port: "service" }
+        - { protocol: "https", port: "service" }
+        - { protocol: "tcp", port: "{{ gitlab_http_port }}" }
+
+  - name: Install GitLab Roles
+    include_role:
+      name: "{{ rolevar }}"
+    loop:
+      - "{{ rolesPath }}/geerlingguy.gitlab"  
+    loop_control:
+      loop_var: rolevar

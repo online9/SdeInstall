@@ -1,0 +1,139 @@
+- hosts: "{{ targetServers }}"
+  vars:
+    jenkinsJobsHome: "/data/jenkins-master/template/jobs"
+    buildTemplateFile: "/data/utils/ansible/config/jenkins_build_config.tmpl"
+    deployTemplateFile: "/data/utils/ansible/config/jenkins_deploy_config.tmpl"
+    packagingTemplateFile: "/data/utils/ansible/config/jenkins_packaging_config.tmpl"
+    jenkinsCli: "java -jar %JENKINS-CLI-JAR% -auth jenkins:jenkins!1 -s http://{{ jenkinsSvrIp }}/ -webSocket "
+
+  vars_files:
+     - /data/utils/ansible/config/ebsSiteBuildConfig.yml
+     - /data/utils/ansible/config/ebsSiteDeployConfig.yml
+
+
+  tasks:
+    - name: Create Jenkins Deploy Jobs Folder
+      delegate_to: localhost
+      file:
+        path: "{{ jenkinsJobsHome }}/Deploy-{{ item.JOB_ID }}"
+        state: directory
+        mode: 0755
+        recurse: yes
+      with_items: "{{ siteDeployConfig }}"
+
+    - name: Create Jenkins Packaging Folder
+      delegate_to: localhost
+      file:
+        path: "{{ jenkinsJobsHome }}/Packaging-{{ item.JOB_ID }}"
+        state: directory
+        mode: 0755
+        recurse: yes
+      with_items: "{{ siteDeployConfig }}"
+
+    - name: Create Jenkins Build Jobs Folder
+      delegate_to: localhost
+      file:
+        path: "{{ jenkinsJobsHome }}/{{ item.JOB_ID }}-{{ item.SVR_TYPE }}"
+        state: directory
+        mode: 0755
+        recurse: yes
+      with_items: "{{ siteBuildConfig }}"
+
+    - name: Copy Jenkins Deploy Config Files
+      delegate_to: localhost
+      copy:
+        src: "{{ deployTemplateFile }}"
+        dest: "{{ jenkinsJobsHome }}/Deploy-{{ item.JOB_ID }}/config.xml"
+        mode: 0755
+      with_items: "{{ siteDeployConfig }}"
+
+    - name: Copy Jenkins Packaging Config Files
+      delegate_to: localhost
+      copy:
+        src: "{{ packagingTemplateFile }}"
+        dest: "{{ jenkinsJobsHome }}/Packaging-{{ item.JOB_ID }}/config.xml"
+        mode: 0755
+      with_items: "{{ siteDeployConfig }}"
+
+    - name: Copy Jenkins Build Config Files
+      delegate_to: localhost
+      copy:
+        src: "{{ buildTemplateFile }}"
+        dest: "{{ jenkinsJobsHome }}/{{ item.JOB_ID }}-{{ item.SVR_TYPE }}/config.xml"
+        mode: 0755
+      with_items: "{{ siteBuildConfig }}"
+
+
+    - name: Modify Jenkins Deploy Config Files
+      delegate_to: localhost
+      shell: |
+        sed -i "s/%{JOB_TITLE}/{{ item.JOB_TITLE }}/g" "{{ jenkinsJobsHome }}/Deploy-{{ item.JOB_ID }}/config.xml"; 
+        sed -i "s/%{DOMAIN_NAME}/{{ item.DOMAIN_NAME }}/g" "{{ jenkinsJobsHome }}/Deploy-{{ item.JOB_ID }}/config.xml"; 
+        sed -i "s/%{JOB_ID}/{{ item.JOB_ID }}/g" "{{ jenkinsJobsHome }}/Deploy-{{ item.JOB_ID }}/config.xml";
+        sed -i "s/%{WAS_LIST}/{{ item.WAS_LIST }}/g" "{{ jenkinsJobsHome }}/Deploy-{{ item.JOB_ID }}/config.xml"; 
+        sed -i "s/%{WEB_LIST}/{{ item.WEB_LIST }}/g" "{{ jenkinsJobsHome }}/Deploy-{{ item.JOB_ID }}/config.xml" 
+      with_items: "{{ siteDeployConfig }}"
+
+    - name: Modify Jenkins Packaging Config Files
+      delegate_to: localhost
+      shell: |
+        sed -i "s/%{JOB_TITLE}/{{ item.JOB_TITLE }}/g" "{{ jenkinsJobsHome }}/Packaging-{{ item.JOB_ID }}/config.xml"; 
+        sed -i "s/%{DOMAIN_NAME}/{{ item.DOMAIN_NAME }}/g" "{{ jenkinsJobsHome }}/Packaging-{{ item.JOB_ID }}/config.xml"; 
+        sed -i "s/%{JOB_ID}/{{ item.JOB_ID }}/g" "{{ jenkinsJobsHome }}/Packaging-{{ item.JOB_ID }}/config.xml";
+        sed -i "s/%{WAS_LIST}/{{ item.WAS_LIST }}/g" "{{ jenkinsJobsHome }}/Packaging-{{ item.JOB_ID }}/config.xml"; 
+        sed -i "s/%{WEB_LIST}/{{ item.WEB_LIST }}/g" "{{ jenkinsJobsHome }}/Packaging-{{ item.JOB_ID }}/config.xml" 
+      with_items: "{{ siteDeployConfig }}"
+
+    - name: Modify Jenkins Build Config Files
+      delegate_to: localhost
+      shell: |
+        sed -i "s/%{JOB_TITLE}/{{ item.JOB_TITLE }}/g" "{{ jenkinsJobsHome }}/{{ item.JOB_ID }}-{{ item.SVR_TYPE }}/config.xml"; 
+        sed -i "s/%{DOMAIN_NAME}/{{ item.DOMAIN_NAME }}/g" "{{ jenkinsJobsHome }}/{{ item.JOB_ID }}-{{ item.SVR_TYPE }}/config.xml"; 
+        sed -i "s/%{JOB_ID}/{{ item.JOB_ID }}/g" "{{ jenkinsJobsHome }}/{{ item.JOB_ID }}-{{ item.SVR_TYPE }}/config.xml";
+        sed -i "s/%{BIZ_KIND}/{{ item.BIZ_KIND }}/g" "{{ jenkinsJobsHome }}/{{ item.JOB_ID }}-{{ item.SVR_TYPE }}/config.xml"; 
+        sed -i "s/%{OP_MODE}/{{ item.OP_MODE }}/g" "{{ jenkinsJobsHome }}/{{ item.JOB_ID }}-{{ item.SVR_TYPE }}/config.xml"; 
+        sed -i "s/%{SVR_TYPE}/{{ item.SVR_TYPE }}/g" "{{ jenkinsJobsHome }}/{{ item.JOB_ID }}-{{ item.SVR_TYPE }}/config.xml"; 
+        sed -i "s/%{SVN_PROJ_NAME}/{{ item.SVN_PROJ_NAME }}/g" "{{ jenkinsJobsHome }}/{{ item.JOB_ID }}-{{ item.SVR_TYPE }}/config.xml"; 
+        sed -i "s/%{SVN_TARGET}/{{ item.SVN_TARGET }}/g" "{{ jenkinsJobsHome }}/{{ item.JOB_ID }}-{{ item.SVR_TYPE }}/config.xml" 
+      with_items: "{{ siteBuildConfig }}"
+
+
+    - name: Append Deploy create-job command
+      delegate_to: localhost
+      shell: echo "set JENKINS-CLI-JAR=M:/EbsDevMariaData/data/build/bin/libs/jenkins-cli.jar" > "{{ jenkinsJobsHome }}/createJenkinsJobs4Ebs.bat" 
+      
+    - name: Append Deploy create-job command
+      delegate_to: localhost
+      shell: echo "{{ jenkinsCli }} create-job Deploy-{{ item.JOB_ID }} < Deploy-{{ item.JOB_ID }}/config.xml" >> "{{ jenkinsJobsHome }}/createJenkinsJobs4Ebs.bat" 
+      with_items: "{{ siteDeployConfig }}"
+
+    - name: Append Packaging create-job command
+      delegate_to: localhost
+      shell: echo "{{ jenkinsCli }} create-job Packaging-{{ item.JOB_ID }} < Packaging-{{ item.JOB_ID }}/config.xml" >> "{{ jenkinsJobsHome }}/createJenkinsJobs4Ebs.bat" 
+      with_items: "{{ siteDeployConfig }}"
+
+    - name: Append Build create-job command
+      delegate_to: localhost
+      shell: echo "{{ jenkinsCli }} create-job {{ item.JOB_ID }}-{{ item.SVR_TYPE }} < {{ item.JOB_ID }}-{{ item.SVR_TYPE }}/config.xml" >> "{{ jenkinsJobsHome }}/createJenkinsJobs4Ebs.bat" 
+      with_items: "{{ siteBuildConfig }}"
+
+
+    - name: Append Deploy delete-job command
+      delegate_to: localhost
+      shell: echo "set JENKINS-CLI-JAR=M:/EbsDevMariaData/data/build/bin/libs/jenkins-cli.jar" > "{{ jenkinsJobsHome }}/deleteJenkinsJobs4Ebs.bat" 
+      
+    - name: Append Deploy delete-job command
+      delegate_to: localhost
+      shell: echo "{{ jenkinsCli }} delete-job Deploy-{{ item.JOB_ID }}" >> "{{ jenkinsJobsHome }}/deleteJenkinsJobs4Ebs.bat"
+      with_items: "{{ siteDeployConfig }}"
+
+    - name: Append Packaging delete-job command
+      delegate_to: localhost
+      shell: echo "{{ jenkinsCli }} delete-job Packaging-{{ item.JOB_ID }}" >> "{{ jenkinsJobsHome }}/deleteJenkinsJobs4Ebs.bat" 
+      with_items: "{{ siteDeployConfig }}"
+
+    - name: Append Build delete-job command
+      delegate_to: localhost
+      shell: echo "{{ jenkinsCli }} delete-job {{ item.JOB_ID }}-{{ item.SVR_TYPE }}" >> "{{ jenkinsJobsHome }}/deleteJenkinsJobs4Ebs.bat" 
+      with_items: "{{ siteBuildConfig }}"
+

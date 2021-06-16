@@ -1,0 +1,40 @@
+- hosts: "{{ targetServers }}"
+
+  tasks:
+    - name: Swap Off
+      become: true
+      ansible.builtin.shell: swapoff -a
+
+    - name: Modify /etc/fstab for Swap Off
+      become: true
+      ansible.builtin.shell: sed -i "s/\/dev\/mapper\/centos-swap/#\/dev\/mapper\/centos-swap/g" /etc/fstab
+
+    - name: Set SELinux Permissive Mode 
+      become: true
+      ansible.builtin.shell: setenforce 0
+
+    - name: Modify Permissive Mode SELinux
+      become: true
+      ansible.builtin.shell: sed -i 's/^SELINUX=enforcing$/SELINUX=permissive/' /etc/selinux/config
+
+    - name: Add Kubernetes Repository
+      become: true
+      ansible.builtin.shell: |
+		cat <<EOF | sudo tee /etc/yum.repos.d/kubernetes.repo
+		[kubernetes]
+		name=Kubernetes
+		baseurl=https://packages.cloud.google.com/yum/repos/kubernetes-el7-\$basearch
+		enabled=1
+		gpgcheck=1
+		repo_gpgcheck=1
+		gpgkey=https://packages.cloud.google.com/yum/doc/yum-key.gpg https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg
+		exclude=kubelet kubeadm kubectl
+		EOF
+		
+	- name: Install Kubenetes Components
+      yum:
+        name:
+          - kubelet 
+          - kubeadm
+          - kubectl
+        state: present

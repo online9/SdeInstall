@@ -1,0 +1,13 @@
+  - name: Create Local Web Control Shell directory
+    file:
+      path: "{{ localWebShellHome }}"
+      state: directory
+      recurse: yes
+    delegate_to: localhost
+
+  - name: Fetch Web Server Controll Shell File
+    ansible.builtin.fetch:
+        src: "{{ remoteWebShellHome }}/{{ item }}"
+        dest: "{{ localWebShellHome }}/{{ item }}"
+        flat: yes
+    with_items: "{{ webShellFiles }}"

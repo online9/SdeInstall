@@ -1,0 +1,40 @@
+- hosts: "{{ targetServers }}"
+  vars: 
+    webFiles: 
+    - { path : "bin", file : "apachectl"}
+    - { path : "bin", file : "env.sh"}
+    - { path : "bin", file : "kill.sh"}
+    - { path : "bin", file : "restart.sh"}
+    - { path : "bin", file : "shutdown.sh"}
+    - { path : "bin", file : "start.sh"}
+    - { path : "bin", file : "status.sh"}
+    - { path : "conf", file : "httpd.conf"}
+    - { path : "conf", file : "httpd-ssl.conf"}
+    - { path : "conf/extra", file : "httpd-default.conf"}
+    - { path : "conf/extra", file : "httpd-mpm.conf"}
+    - { path : "conf/extra", file : "httpd-vhosts.conf"}
+    - { path : "conf/modjk", file : "mod_jk.conf"}
+    - { path : "conf/modjk", file : "uriworkermap.properties"}
+    - { path : "conf/modjk", file : "workers.properties"}
+
+    configHome: "/data/config"
+    webHome: "/data/servers/web"
+
+  tasks:
+    - name: Create Config/Shell Folder
+      delegate_to: localhost
+      file:
+        path: "{{ configHome }}/{{ item }}"
+        state: directory
+        mode: 0755
+        recurse: yes
+      with_items: 
+        - "web"
+
+    - name: Fetch Web Config/Shell Files
+      fetch:
+        src: "{{ webHome }}/{{ server_path }}-01/{{ item.path }}/{{ item.file }}"
+        dest: "{{ configHome }}/web/{{ inventory_hostname }}/{{ item.path }}/{{ item.file }}"
+        mode: 0755
+        flat: yes        
+      with_items: "{{ webFiles }}"

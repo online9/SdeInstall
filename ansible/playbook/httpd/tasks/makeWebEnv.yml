@@ -1,0 +1,84 @@
+- hosts: "{{ targetServers }}"
+  vars: 
+    shellFiles: ["apachectl",
+                 "env.sh",
+                 "kill.sh",
+                 "restart.sh",
+                 "shutdown.sh",
+                 "start.sh",
+                 "status.sh"]
+
+    configFiles: ["application-roles.properties",
+                 "application-users.properties",
+                 "logging.properties",
+                 "mgmt-groups.properties",
+                 "mgmt-users.properties",
+                 "standalone-full-ha.xml",
+                 "standalone-full.xml",
+                 "standalone-ha.xml",
+                 "standalone-load-balancer.xml",
+                 "standalone.xml"]
+
+    webHome: "/data/web"
+    binHome: "{{ webHome }}/bin"
+    configHome: "{{ wasHome }}/configuration"
+    localConfigHome: "/data/config/was/{{ inventory_hostname }}/configuration"
+    remoteConfigHome: "/data/servers/was/{{ serverPrefix }}/{{ instanceId }}/configuration"
+    serverPrefix: "P-{{ domain_name | upper }}-{{ biz_kind | upper }}"
+    instanceId: "{{ serverPrefix }}-{{ app_type | upper }}-{{ server_type | upper }}-01" 
+
+  tasks:
+    - name: Remove deployments Symbloic link
+      file:
+        path: "{{ wasHome }}/{{ item }}"
+        state: absent
+      with_items: 
+        - "deployments"
+
+    - name: Create Deploy Home Folder
+      file:
+        path: "/p{{ domain_name }}/deploy/{{ biz_kind }}/was"
+        state: directory
+        mode: 0755
+        recurse: yes
+
+    - name: Create WAS Home Folder
+      file:
+        path: "{{ wasHome }}/{{ item }}"
+        state: directory
+        mode: 0755
+        recurse: yes
+      with_items: 
+        - "bin"
+        - "configuration"
+        - "data"
+        - "lib/ext"
+        - "tmp"
+
+    - name: Copy Shell Files
+      copy:
+        src: "{{ binHome }}/{{ item }}"
+        dest: "{{ binHome }}/{{ item }}"
+        mode: 0755
+      with_items: "{{ shellFiles }}"
+
+    - name: Fetch Was Config Files
+      fetch:
+        src: "{{ remoteConfigHome }}/{{ item }}"
+        dest: "{{ localConfigHome }}/{{ item }}"
+        mode: 0755
+        flat: yes        
+      with_items: "{{ configFiles }}"
+
+    - name: Copy Config Files
+      copy:
+        src: "{{ localConfigHome }}/{{ item }}"
+        dest: "{{ configHome }}/{{ item }}"
+        mode: 0755
+      with_items: "{{ configFiles }}"
+
+    - name: Create a symbolic link
+      file:
+        src: "/p{{ domain_name }}/deploy/{{ biz_kind }}/was"
+        dest: /data/was/deployments
+        state: link

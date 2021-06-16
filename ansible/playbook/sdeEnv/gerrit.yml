@@ -1,0 +1,98 @@
+---
+  - name: Define variables for Gerrit
+    set_fact:
+      gerrit_site: nxf
+      gerrit_version: "3.4.0"
+      gerrit_http_port: 8080
+      gerrit_host: "{{ ansible_host }}"
+      gerrit_httpd_listen_url: "proxy-http://{{ ansible_host }}:8080/"
+      gerrit_config_canonical_weburl: "http://{{ ansible_host }}"
+      gerrit_users:
+        - { username: "online9", password: "password" }
+        - { username: "gerrit001", password: "password" }
+        - { username: "gerrit002", password: "password" }
+        - { username: "gerrit003", password: "password" }
+      
+  - name: Define variables for Httpd
+    set_fact:
+      http_listen_port: 80
+      httpd_config: "/etc/httpd/conf.d"
+      httpd_passwords: "/etc/httpd/conf/passwords"
+
+  - name: Define variables for MySQL/MariaDB
+    set_fact:
+      mariadb_root_password: "password"
+      mariadb_databases:
+        - name: gerrit
+          encoding: utf8
+          collation: utf8_general_ci
+      mariadb_users:
+        - name: gerrit
+          host: "%"
+          password: gerrit
+          priv: "gerrit.*:ALL"
+
+  - name: Define variables for JDK
+    set_fact:
+      java_vendor: openjdk
+
+  - name: Define JDK 1.8 variables 
+    set_fact:
+      java_openjdk_package: "java-1.8.0-openjdk"
+    when: gerrit_version is not defined or gerrit_version < "3.3"
+
+  - name: Define JDK 11 variables
+    set_fact:
+      java_openjdk_package: "java-11-openjdk"
+    when: gerrit_version is defined and gerrit_version >= "3.3"
+
+  - name: Open Gerrit Http port
+    include_tasks: "{{sdePath}}/open_firewall.yml"
+    vars:
+      work_name: "Gerrit"
+      port_info:
+        - { protocol: "http", port: "service" }
+        - { protocol: "https", port: "service" }
+        - { protocol: "tcp", port: "{{ http_listen_port }}" }
+
+  - name: Modify SELinux for httpd
+    shell: "{{ item }}"
+    with_items:
+      - "setsebool httpd_can_network_connect 1"
+      - "setsebool -P httpd_can_network_connect 1"
+
+  - name: Install Gerrit Roles
+    include_role: 
+      name: "{{ rolevar }}"
+    loop:
+      - "{{ rolesPath }}/bertvv.mariadb"
+      - "{{ rolesPath }}/geerlingguy.git"
+      - "{{ rolesPath }}/geerlingguy.apache"
+      - "{{ rolesPath }}/vdzhorov.gerrit"
+    loop_control:
+      loop_var: rolevar
+
+  - name: Install package dependencies.
+    package:
+      name: "{{ item }}"
+      state: "present"
+    with_items:
+      - python-passlib
+
+  - name: Add a user to a password file suitable for use by libpam-pwdfile
+    htpasswd:
+      path: "{{ httpd_passwords }}"
+      name: "{{ item.username }}"
+      password: "{{ item.password }}"
+    with_items:
+      - "{{ gerrit_users }}"
+
+  - name: Template a file to {{ httpd_config }}/vhosts.conf
+    ansible.builtin.template:
+      src: "{{ sdePath }}/templates/gerrit-vhosts.conf.j2"
+      dest: "{{ httpd_config }}/vhosts.conf"
+
+  - name: Restart service httpd
+    ansible.builtin.service:
+      name: httpd
+      state: restarted

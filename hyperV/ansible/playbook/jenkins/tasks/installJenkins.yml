@@ -1,0 +1,102 @@
+- hosts: "{{ targetServers }}"
+  vars: 
+    antVersion: "1.10.9"    
+    mavenVersion: "3.6.3"
+    jenkinsVersion: "2.263.3"
+
+    dataHome: "/data"
+    utilsHome: "{{ dataHome }}/utils"
+    downloadsHome: "{{ utilsHome }}/downloads"
+    libsHome: "{{ utilsHome }}/libs"
+    toolsHome: "{{ utilsHome }}/tools"
+    apacheUrl: "https://downloads.apache.org"
+
+  tasks:
+    - name: Make sure we have a 'sicc' group
+      group:
+        name: sicc
+        gid: 1001
+        state: present  
+      
+    - name: Add the user 'sicc' with a bash shell, appending the group 'sicc'
+      user:
+        name: sicc
+        groups: sicc
+        uid: 1001
+        shell: /bin/bash
+        append: yes
+
+    - name: Replace a localhost entry with our own
+      ansible.builtin.lineinfile:
+        path: "/home/sicc/.bash_profile"
+        line: "export JENKINS_HOME=/data/jenkins-master"
+        insertafter: EOF
+      with_items:
+        - "export JENKINS_HOME=/data/jenkins-master"
+        - "export JAVA_HOME=/etc/alternatives/java_sdk_1.8.0_openjdk"
+
+    - name: Install Open JDK
+      yum:
+        name:
+          - java-1.8.0-openjdk
+          - java-1.8.0-openjdk-devel
+        state: present
+
+    - name: Create Data Folder
+      file:
+        path: "{{ item }}"
+        state: directory
+        mode: 0755
+        recurse: yes
+      with_items: 
+        - "{{ dataHome }}"
+
+    - name: Create Jenkins Folder
+      file:
+        path: "{{ item }}"
+        state: directory
+        group: sicc
+        owner: sicc
+        mode: 0755
+        recurse: yes
+      with_items: 
+        - "{{ dataHome }}/jenkins-master"
+        - "{{ utilsHome }}/bin"
+        - "{{ utilsHome }}/downloads"
+        - "{{ utilsHome }}/libs"
+        - "{{ utilsHome }}/tools"
+
+    - name: Download Ant/Maven/Jenkins
+      get_url: url={{ item.url }} dest={{ item.dest }}
+      with_items: 
+        - { url: "https://get.jenkins.io/war-stable/{{ jenkinsVersion }}/jenkins.war", dest: "{{ libsHome }}" }  
+      
+    - name: Extract Ant/Maven
+      ansible.builtin.unarchive:
+        src: "{{ item }}"
+        dest: "{{ toolsHome }}/"
+        remote_src: yes
+      with_items: 
+        - "{{ apacheUrl }}/ant/binaries/apache-ant-{{ antVersion }}-bin.tar.gz"
+        - "{{ apacheUrl }}/maven/maven-3/{{ mavenVersion }}/binaries/apache-maven-{{ mavenVersion }}-bin.tar.gz"
+
+    - name: Create a symbolic link
+      ansible.builtin.file:
+        src: "{{ toolsHome }}/{{ item.source }}"
+        dest: "{{ toolsHome }}/{{ item.link }}"
+        state: link
+      with_items: 
+        - { source: "apache-ant-{{ antVersion }}", link: "ant" }
+        - { source: "apache-maven-{{ mavenVersion }}", link: "maven" }
+
+    - name: Copy Jenkins Start Shell
+      copy:
+        content: "nohup java -server -Xmx{{ xmxMemory }}m -XX:+UseG1GC -jar /data/utils/libs/jenkins.war --httpPort={{ jenkinsPort }} 2>&1 &"
+        dest: /data/utils/bin/startJenkinsMaster.sh
+        force: no
+        group: sicc
+        owner: sicc
+        mode: 0755
+
+    - name: Start Jenkins Server
+      shell: echo "/data/utils/bin/startJenkinsMaster.sh" | su - sicc

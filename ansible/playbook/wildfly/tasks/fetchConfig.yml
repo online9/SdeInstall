@@ -1,0 +1,29 @@
+  - name: Create Local Was Config directory
+    file:
+      path: "{{ localWasConfigHome }}"
+      state: directory
+      recurse: yes
+    delegate_to: localhost
+
+  - name: Fetch Was Config File
+    ansible.builtin.fetch:
+        src: "{{ remoteWasConfigHome }}/{{ item }}"
+        dest: "{{ localWasConfigHome }}/{{ item }}"
+        flat: yes
+    with_items: "{{ wasConfigFiles }}"
+
+  - name: Fetch Was Config File for Online Site
+    ansible.builtin.fetch:
+        src: "{{ remoteWasConfigHome }}/{{ item }}"
+        dest: "{{ localWasConfigHome }}/{{ item }}"
+        flat: yes
+    with_items: "{{ wasConfigFilesForOnline }}"
+    when: ha == "no" 
+
+  - name: Fetch Was Config File for Administrator/Management Site
+    ansible.builtin.fetch:
+        src: "{{ remoteWasConfigHome }}/{{ item }}"
+        dest: "{{ localWasConfigHome }}/{{ item }}"
+        flat: yes
+    with_items: "{{ wasConfigFilesForMgmt }}"
+    when: ha == "yes" 

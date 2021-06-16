@@ -1,0 +1,102 @@
+---
+  - name: Define Grafana Variables
+    set_fact:
+      grafana_port: 3000
+      grafana_security:
+        admin_user: "admin"
+        admin_password: "admin"
+      grafana_plugins:
+        - grafana-clock-panel
+        - mxswat-separator-panel
+        - briangann-gauge-panel
+        - jdbranham-diagram-panel
+        - michaeldmoore-annunciator-panel  
+        - agenty-flowcharting-panel
+        - grafana-piechart-panel
+        - yesoreyeram-boomtheme-panel        	
+      grafana_dashboards:
+        - { dashboard_id: "11912", revision_id: "1", name: "telegraf", datasource: "telegraf" }
+        - { dashboard_id: "331", revision_id: "1", name: "telegraf", datasource: "telegraf" }
+        - { dashboard_id: "4031", revision_id: "1", name: "telegraf", datasource: "telegraf" }
+        - { dashboard_id: "6908", revision_id: "1", name: "telegraf", datasource: "telegraf" }
+        - { dashboard_id: "13022", revision_id: "1", name: "telegraf", datasource: "telegraf" }
+      grafana_datasources:
+        - { name: "scouter", type: "influxdb", database: "scouter", url: "http://localhost:8086", readOnly: false, editable: true }
+        - { name: "telegraf", type: "influxdb", database: "telegraf", url: "http://localhost:8086", readOnly: false, editable: true }
+      grafana_dashboard_json_files:
+        - { json_file: "SystemDashboardByTelegraf.json" }
+        - { json_file: "LinuxServerDashboard.json" }
+#        - { json_file: "SDEMariaDBMetrics.json" }
+#        - { json_file: "SDEServerGroup-OverAll.json" }
+#        - { json_file: "SDEServerGroupTrend-OverAll.json" }
+#        - { json_file: "RedisDataCache.json" }
+#        - { json_file: "RedisSessionStore.json" }
+#        - { json_file: "SDEServer.json" }
+#        - { json_file: "SDEServerGroup.json" }
+      local_dashboard_path: "{{ ansiblePath }}/config/grafana"
+
+  - name: Install package dependencies.
+    package:
+      name: "{{ item }}"
+      state: "present"
+    with_items:
+      - epel-release
+      - jq
+
+  - name: Make Dashboard json folder
+    file:
+      path: "{{ local_dashboard_path }}"
+      state: directory
+      recurse: yes
+
+  - name: Open Grafana Http port
+    include_tasks: "{{sdePath}}/open_firewall.yml"
+    vars:
+      work_name: "Grafana"
+      port_info: 
+        - { protocol: "tcp", port: "{{ grafana_port }}" }
+
+  - name: Install Grafana Roles
+    include_role: 
+      name: "{{ rolevar }}"
+    loop:
+      - "{{ rolesPath }}/cloudalchemy.grafana"
+    loop_control:
+      loop_var: rolevar
+
+  - name: Copy Dashboard Json files
+    copy:
+      src: "{{ ansiblePath }}/config/grafana/{{ item.json_file }}"
+      dest: "{{ local_dashboard_path }}/{{ item.json_file }}"
+    with_items: "{{ grafana_dashboard_json_files }}"
+
+  - name: Create Influxdb datasources.
+    community.grafana.grafana_datasource:
+      name: "{{ item.name }}"
+      grafana_url: "http://{{ ansible_host }}:{{ grafana_port }}"
+      grafana_user: "{{ grafana_security.admin_user }}"
+      grafana_password: "{{ grafana_security.admin_password }}"
+      ds_type: "{{ item.type }}"
+      ds_url: "{{ item.url }}"
+      database: "{{ item.database }}"
+    with_items: "{{ grafana_datasources }}"
+
+  - name: Import Grafana dashboards
+    community.grafana.grafana_dashboard:
+      grafana_url: "http://{{ ansible_host }}:{{ grafana_port }}"
+      grafana_user: "{{ grafana_security.admin_user }}"
+      grafana_password: "{{ grafana_security.admin_password }}"
+      state: present
+      overwrite: yes
+      dashboard_id: "{{ item.dashboard_id }}"
+    with_items: "{{ grafana_dashboards }}"
+
+  - name: Import Grafana dashboards from local json
+    community.grafana.grafana_dashboard:
+      grafana_url: "http://{{ ansible_host }}:{{ grafana_port }}"
+      grafana_user: "{{ grafana_security.admin_user }}"
+      grafana_password: "{{ grafana_security.admin_password }}"
+      path: "{{ local_dashboard_path }}/{{ item.json_file }}"
+      state: present
+      overwrite: yes
+    with_items: "{{ grafana_dashboard_json_files }}"

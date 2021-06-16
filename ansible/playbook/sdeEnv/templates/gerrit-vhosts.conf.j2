@@ -1,0 +1,30 @@
+NameVirtualHost *:80
+
+<VirtualHost *:80>
+    # 서버에서 요청을 구분하기 위한 호스트 이름
+    ServerName {{ gerrit_host }}
+
+    ProxyRequests Off
+    ProxyVia Off
+    ProxyPreserveHost On
+
+    <Proxy *>
+        Order deny,allow
+        Allow from all
+    </Proxy>
+
+    # HTTP 기본 인증을 위한 부분
+    # AuthUserFile 옵션은 사용자 인증 정보 파일의 경로
+    <Location /login/>
+        AuthType Basic
+        AuthName "Gerrit Code Review"
+        Require valid-user
+        AuthUserFile {{ httpd_passwords }}
+    </Location>
+
+    # Gerrit 내부적으로 인코딩된 빗금 사용
+    AllowEncodedSlashes On
+    # Gerrit의 기본 포트는 8080
+    ProxyPass / http://{{ gerrit_host }}:8080/ nocanon
+    ProxyPassReverse / http://{{ gerrit_host }}:8080/
+</VirtualHost>

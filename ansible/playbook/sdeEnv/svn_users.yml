@@ -1,0 +1,54 @@
+---
+  - set_fact:
+      svn_groups:
+        - admin
+        - qa
+        - developer
+        - designer
+        - deployer
+        - reader
+        - reviewer
+        - tester
+      svn_base_mappings:
+        - { name: "*", rights: "" } 
+        - { name: "@admin", rights: "rw" } 
+        - { name: "@qa", rights: "r" } 
+        - { name: "@reader", rights: "r" } 
+        - { name: "@reviewer", rights: "r" } 
+        - { name: "@developer", rights: "rw" } 
+        - { name: "@deployer", rights: "r" } 
+        - { name: "@tester", rights: "r" } 
+      svn_users:
+        - { username: "qa", password: "password" }
+        - { username: "tester", password: "password" }
+        - { username: "jenkins", password: "password" }
+        - { username: "reviewer", password: "password" }
+        - { username: "online9", password: "password" }
+        - { username: "onlinet69", password: "password" }
+
+  - set_fact:
+      svn_projects: 
+        - name: "nxf_proj1"
+          groups:
+            - { name: "admin", users: "online9,onlinet69" }
+            - { name: "deployer", users: "jenkins" }
+            - { name: "developer", users: "online9,onlinet69" }
+            - { name: "reviewer", users: "reviewer,online9" }
+          authz:
+            - path: "/src"
+              mappings: 
+                - { name: "online9", rights: "rw" } 
+                - { name: "onlinet69", rights: "r" } 
+              default_mapping: "{{ svn_base_mappings }}"
+        - name: "nxf_proj2"
+          groups:
+            - { name: "admin", users: "online9,onlinet69" }
+            - { name: "deployer", users: "jenkins" }
+            - { name: "developer", users: "online9,onlinet69" }
+            - { name: "tester", users: "tester,onlinet69" }
+          authz:
+            - path: "/src"
+              mappings:
+                - { name: "online9", rights: "rw" } 
+                - { name: "onlinet69", rights: "r" } 
+              default_mapping: "{{ svn_base_mappings }}"

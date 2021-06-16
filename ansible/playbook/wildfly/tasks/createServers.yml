@@ -1,0 +1,12 @@
+- hosts: "{{ targetServers }}"
+  vars:
+    targetServerName: "wildfly"  
+    playbookHome: "/data/utils/ansible/playbook"
+
+  vars_files:
+     - "{{ playbookHome }}/common/common.yml"
+
+  tasks:
+    - include: "{{ tasksHome }}/installWildfly.yml"
+    - include: "{{ tasksHome }}/fetchAll.yml"
+    - include: "{{ tasksHome }}/makeEnv.yml"

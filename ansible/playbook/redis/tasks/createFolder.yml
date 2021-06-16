@@ -1,0 +1,19 @@
+    - name: Create Redis Folder
+      file:
+        path: "{{ serversHome }}/{{ item }}"
+        state: directory
+        mode: 0755
+        recurse: yes
+      with_items: 
+        - "master"
+        - "slave1"
+        - "slave2"
+
+    - name: Create Utils Folder
+      file:
+        path: "{{ utilsHome }}/{{ item }}"
+        state: directory
+        mode: 0755
+        recurse: yes
+      with_items: 
+        - "commons"

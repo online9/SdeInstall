@@ -1,0 +1,238 @@
+<?xml version='1.1' encoding='UTF-8'?>
+<flow-definition plugin="workflow-job@2.40">
+  <actions/>
+  <description>EBS %{JOB_TITLE} Build</description>
+  <keepDependencies>false</keepDependencies>
+  <properties>
+    <hudson.security.AuthorizationMatrixProperty>
+      <inheritanceStrategy class="org.jenkinsci.plugins.matrixauth.inheritance.InheritParentStrategy"/>
+      <permission>hudson.model.Item.Build:ebs%{DOMAIN_NAME}</permission>
+      <permission>hudson.model.Item.Configure:ebs%{DOMAIN_NAME}</permission>
+      <permission>hudson.model.Item.Read:ebs%{DOMAIN_NAME}</permission>
+      <permission>hudson.model.Item.Workspace:ebs%{DOMAIN_NAME}</permission>
+    </hudson.security.AuthorizationMatrixProperty>
+    <org.jenkinsci.plugins.workflow.job.properties.DurabilityHintJobProperty>
+      <hint>PERFORMANCE_OPTIMIZED</hint>
+    </org.jenkinsci.plugins.workflow.job.properties.DurabilityHintJobProperty>
+    <jenkins.model.BuildDiscarderProperty>
+      <strategy class="hudson.tasks.LogRotator">
+        <daysToKeep>10</daysToKeep>
+        <numToKeep>30</numToKeep>
+        <artifactDaysToKeep>-1</artifactDaysToKeep>
+        <artifactNumToKeep>-1</artifactNumToKeep>
+      </strategy>
+    </jenkins.model.BuildDiscarderProperty>
+    <hudson.model.ParametersDefinitionProperty>
+      <parameterDefinitions>
+        <hudson.model.StringParameterDefinition>
+          <name>BUILD_TITLE</name>
+          <description>&lt;b style=&quot;font-size:1.2em;&quot;&gt;빌드 제목(BuildNo : Jenkins 설정이래로 빌드한 순차번호, Build Version : 년도.월.월에빌드한 순차번호&lt;/b&gt;</description>
+          <defaultValue>개발 빌드(BuildNo : ${BUILD_NUMBER})</defaultValue>
+          <trim>false</trim>
+        </hudson.model.StringParameterDefinition>
+        <hudson.model.TextParameterDefinition>
+          <name>BUG_FIXES</name>
+          <description>&lt;b style=&quot;font-size:1.2em;color:blue&quot;&gt;개선 사항 및 버그 픽스, 상세하게 기술&lt;/b&gt;</description>
+          <defaultValue>- %{BUILD_VERSION}
+    o  수정 사항을 명시
+</defaultValue>
+          <trim>false</trim>
+        </hudson.model.TextParameterDefinition>
+        <hudson.model.TextParameterDefinition>
+          <name>ETC_NOTE</name>
+          <description>&lt;b style=&quot;font-size:1.2em;color:blue&quot;&gt;기본 빌드 노트 이외 추가할 사항을 명시&lt;/b&gt;</description>
+          <defaultValue>추가 내용 없음</defaultValue>
+          <trim>false</trim>
+        </hudson.model.TextParameterDefinition>
+        <hudson.model.ChoiceParameterDefinition>
+          <name>KEEP_HISTORY</name>
+          <description>&lt;b style=&quot;font-size:1.2em;&quot;&gt;개발 빌드 히스토리를 보관할 숫자 지정&lt;/b&gt;</description>
+          <choices class="java.util.Arrays$ArrayList">
+            <a class="string-array">
+              <string>90</string>
+              <string>10</string>
+              <string>20</string>
+              <string>30</string>
+              <string>60</string>
+              <string>120</string>
+              <string>No Limit</string>
+            </a>
+          </choices>
+        </hudson.model.ChoiceParameterDefinition>
+        <hudson.model.ChoiceParameterDefinition>
+          <name>BUILD_TYPE</name>
+          <description>&lt;b style=&quot;font-size:1.2em;&quot;&gt;통상적인 개발/테스트 빌드와 스테이징 및 운영 환경에 배포하기 위한 빌드를 지정&lt;/b&gt;</description>
+          <choices class="java.util.Arrays$ArrayList">
+            <a class="string-array">
+              <string>Staging Test Build</string>
+              <string>Development Test Build</string>
+              <string>Production Apply Build</string>
+            </a>
+          </choices>
+        </hudson.model.ChoiceParameterDefinition>
+        <hudson.model.ChoiceParameterDefinition>
+          <name>DEPLOY_YN</name>
+          <description>&lt;b style=&quot;font-size:1.2em;color:red&quot;&gt;빌드한 war 배포 유무, WildFly 서버에 was 형태로 배포하면 바로 deploy가 진행됨&lt;/b&gt;</description>
+          <choices class="java.util.Arrays$ArrayList">
+            <a class="string-array">
+              <string>NO</string>
+              <string>YES</string>
+            </a>
+          </choices>
+        </hudson.model.ChoiceParameterDefinition>
+        <hudson.model.ChoiceParameterDefinition>
+          <name>RESTART_SERVER</name>
+          <description>&lt;b style=&quot;font-size:1.2em;color:blue&quot;&gt;서버 재기동 유무, 빌드후 Deploy를 함께 진행시 서버를 중단하고 재시작하도록 함&lt;/b&gt;</description>
+          <choices class="java.util.Arrays$ArrayList">
+            <a class="string-array">
+              <string>NO</string>
+              <string>YES</string>
+            </a>
+          </choices>
+        </hudson.model.ChoiceParameterDefinition>
+        <hudson.model.ChoiceParameterDefinition>
+          <name>ETC_REPORT</name>
+          <description>&lt;b style=&quot;font-size:1.2em;&quot;&gt;SVN Revision Log 및 빌드 버전간의 파일 비교 파일 생성 유무 : NONE, Build File Diff, SVN Revision Log, All&lt;/b&gt;</description>
+          <choices class="java.util.Arrays$ArrayList">
+            <a class="string-array">
+              <string>NONE</string>
+              <string>All</string>
+              <string>Build and Release File Diff</string>
+              <string>SVN Revision Log</string>
+            </a>
+          </choices>
+        </hudson.model.ChoiceParameterDefinition>
+      </parameterDefinitions>
+    </hudson.model.ParametersDefinitionProperty>
+  </properties>
+  <definition class="org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition" plugin="workflow-cps@2.87">
+    <script>node {
+    def DOMAIN_NAME = &quot;%{DOMAIN_NAME}&quot;
+    def BIZ_KIND = &quot;%{BIZ_KIND}&quot;
+    def SVR_TYPE = &quot;%{SVR_TYPE}&quot;
+    def PROJ_NAME = &quot;%{SVN_PROJ_NAME}&quot;
+    def SVN_TARGET = &quot;%{SVN_TARGET}&quot;
+    def OP_MODE = &quot;%{OP_MODE}&quot;
+
+    def POM = &quot;&quot;
+    def MVN_OPT = &quot;&quot;
+    def FILE_NAME = &quot;&quot;
+    def FILE_EXT = &quot;war&quot;
+    def TARGET_FILE = &quot;&quot;
+    def DEPLOY_TYPE = &quot;full&quot;
+    def RUN_MODE = &quot;${env.RUN_MODE}&quot;
+    def PROJ_KIND = &quot;${DOMAIN_NAME}-${BIZ_KIND}&quot;
+    def UTILS_PATH = &quot;/data/utils&quot;
+    def BUILD_BIN_PATH = &quot;/data/build/bin&quot;
+    def BUILD_REPO = &quot;/data/build/${DOMAIN_NAME}/${BIZ_KIND}/${SVR_TYPE}&quot;
+    def DEPLOY_PATH = &quot;/${RUN_MODE}${DOMAIN_NAME}/deploy/${BIZ_KIND}/${SVR_TYPE}&quot;
+
+    load &quot;${BUILD_BIN_PATH}/config/${RUN_MODE}-svn-list.groovy&quot;
+    load &quot;${BUILD_BIN_PATH}/config/${RUN_MODE}-${DOMAIN_NAME}-server-list.groovy&quot;
+
+    def SVR_IP_01 = env.&quot;svr_ip_${DOMAIN_NAME}_${BIZ_KIND}_${OP_MODE}_${SVR_TYPE}_01&quot;
+    def SVR_IP_02 = env.&quot;svr_ip_${DOMAIN_NAME}_${BIZ_KIND}_${OP_MODE}_${SVR_TYPE}_02&quot;
+
+    def MAVEN_HOME = tool &quot;M3&quot;
+    def SVN_REPO = env.&quot;svn_${DOMAIN_NAME}&quot; + &quot;/${PROJ_NAME}&quot;
+    def BUILD_VERSION = VersionNumber([
+        projectStartDate: &apos;2000-01-01&apos;,
+        skipFailedBuilds: true,
+        versionNumberString: &apos;${YEARS_SINCE_PROJECT_START}.${BUILD_MONTH}.${BUILDS_THIS_MONTH}&apos;
+    ])
+
+    if (SVR_TYPE == &apos;web&apos;) {
+        MVN_OPT=&quot;-f pom4web.xml&quot;
+        FILE_EXT = &quot;tar.gz&quot;
+    }
+
+    stage(&apos;Checkout&apos;) {
+        checkout([
+            $class: &apos;SubversionSCM&apos;,
+            additionalCredentials: [],
+            filterChangelog: false,
+            ignoreDirPropChanges: false,
+            locations: [
+                [cancelProcessOnExternalsFail: true,
+                credentialsId: &apos;admin&apos;,
+                depthOption: &apos;files&apos;,
+                ignoreExternalsOption: true,
+                local: &apos;.&apos;,
+                remote: SVN_REPO],
+                [cancelProcessOnExternalsFail: true,
+                credentialsId: &apos;admin&apos;,
+                depthOption: &apos;infinity&apos;,
+                ignoreExternalsOption: true,
+                local: SVN_TARGET,
+                remote: SVN_REPO + &apos;/&apos; + SVN_TARGET]],
+            workspaceUpdater: [$class: &apos;UpdateUpdater&apos;]
+        ])
+    }
+
+    stage(&apos;Build&apos;) {
+        POM = readMavenPom file: &apos;pom.xml&apos;
+        FILE_NAME = &quot;${POM.artifactId}&quot;
+        TARGET_FILE = &quot;${FILE_NAME}.${FILE_EXT}&quot;
+
+        configFileProvider([configFile(fileId: &apos;maven_settings&apos;, variable: &apos;maven_settings&apos;)]) {
+            sh &quot;&apos;${MAVEN_HOME}/bin/mvn&apos; ${MVN_OPT} -s $maven_settings -Dintegration-tests.skip=true -Dmaven.test.skip=true clean package&quot;
+        }
+    }
+
+    stage(&apos;Archive artifacts&apos;) {
+        sh &quot;mkdir -p ${BUILD_REPO}/${BUILD_VERSION};&quot;
+        sh &quot;cp ${WORKSPACE}/target/${TARGET_FILE} ${BUILD_REPO}/${BUILD_VERSION}/&quot;
+    }
+
+    withEnv([
+        &quot;SVR_TYPE=${SVR_TYPE}&quot;,
+        &quot;PROJ_KIND=${PROJ_KIND}&quot;,
+        &quot;PROJ_NAME=${PROJ_NAME}&quot;,
+        &quot;BUILD_VERSION=${BUILD_VERSION}&quot;,
+        &quot;BUILD_REPO=${BUILD_REPO}&quot;,
+        &quot;FILE_NAME=${FILE_NAME}&quot;,
+        &quot;FILE_EXT=${FILE_EXT}&quot;,
+        &quot;TARGET_FILE=${TARGET_FILE}&quot;
+    ]) {
+        stage(&apos;Make Build Note&apos;) {
+            sh &quot;${BUILD_BIN_PATH}/makeBuildNote.sh&quot;
+        }
+    }
+
+    stage(&apos;Deploy&apos;) {
+        if (env.DEPLOY_YN == &apos;YES&apos;) {
+            if (env.RESTART_SERVER == &apos;YES&apos;) {
+                sh &quot;sshpass -p ${env.BASE_PW} ssh -p ${env.SSH_PORT} -o StrictHostKeyChecking=no ${SVR_TYPE}@${SVR_IP_01} &apos;${UTILS_PATH}/ebsCtl.sh shutdown ${BIZ_KIND}&apos;&quot;
+
+                if (RUN_MODE == &quot;p&quot;) {
+                    sh &quot;sshpass -p ${env.BASE_PW} ssh -p ${env.SSH_PORT} -o StrictHostKeyChecking=no ${SVR_TYPE}@${SVR_IP_02} &apos;${UTILS_PATH}/ebsCtl.sh shutdown ${BIZ_KIND}&apos;&quot;
+                }
+            }
+
+            sh &quot;sshpass -p ${env.BASE_PW} ssh -p ${env.SSH_PORT} -o StrictHostKeyChecking=no ${SVR_TYPE}@${SVR_IP_01} &apos;mkdir -p ${DEPLOY_PATH}&apos;&quot;
+            sh &quot;sshpass -p ${env.BASE_PW} scp -P ${env.SSH_PORT} -o StrictHostKeyChecking=no ${WORKSPACE}/target/${TARGET_FILE} ${SVR_TYPE}@${SVR_IP_01}:${DEPLOY_PATH}/${TARGET_FILE}&quot;
+            sh &quot;sshpass -p ${env.BASE_PW} scp -P ${env.SSH_PORT} -o StrictHostKeyChecking=no ${BUILD_REPO}/${BUILD_VERSION}/Build-Note.txt ${SVR_TYPE}@${SVR_IP_01}:${DEPLOY_PATH}/Build-Note.txt&quot;
+
+            if (SVR_TYPE == &apos;web&apos;) {
+                sh &quot;sshpass -p ${env.BASE_PW} ssh -p ${env.SSH_PORT} -o StrictHostKeyChecking=no ${SVR_TYPE}@${SVR_IP_01} &apos;${UTILS_PATH}/ebsCtl.sh --${SVR_TYPE} --${DEPLOY_TYPE} deploy ${BIZ_KIND}&apos;&quot;
+                sh &quot;sshpass -p ${env.BASE_PW} ssh -p ${env.SSH_PORT} -o StrictHostKeyChecking=no ${SVR_TYPE}@${SVR_IP_02} &apos;${UTILS_PATH}/ebsCtl.sh --${SVR_TYPE} --${DEPLOY_TYPE} deploy ${BIZ_KIND}&apos;&quot;
+            }
+        }
+    }
+
+    stage(&apos;Restart Server&apos;) {
+        if (env.RESTART_SERVER == &apos;YES&apos;) {
+            echo &quot;Restart Wildfly Server(${SVR_IP_01},${SVR_IP_01} - ${PROJ_KIND})&quot;
+            sh &quot;sshpass -p ${env.BASE_PW} ssh -p ${env.SSH_PORT} -o StrictHostKeyChecking=no ${SVR_TYPE}@${SVR_IP_01} &apos;${UTILS_PATH}/ebsCtl.sh start ${BIZ_KIND}&apos;&quot;
+
+            if (RUN_MODE == &quot;p&quot;) {
+                sh &quot;sshpass -p ${env.BASE_PW} ssh -p ${env.SSH_PORT} -o StrictHostKeyChecking=no ${SVR_TYPE}@${SVR_IP_02} &apos;${UTILS_PATH}/ebsCtl.sh start ${BIZ_KIND}&apos;&quot;
+            }
+        }
+    }
+}</script>
+    <sandbox>true</sandbox>
+  </definition>
+  <triggers/>
+  <disabled>false</disabled>
+</flow-definition>

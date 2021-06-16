@@ -1,0 +1,21 @@
+  - name: Create Local Web Config directory
+    file:
+      path: "{{ localWebConfigHome }}/{{ item }}"
+      state: directory
+      recurse: yes
+    delegate_to: localhost
+    with_items: "{{ webEtcConfigFolders }}"
+
+  - name: Fetch Web Config File
+    ansible.builtin.fetch:
+        src: "{{ remoteWebConfigHome }}/{{ item }}"
+        dest: "{{ localWebConfigHome }}/{{ item }}"
+        flat: yes
+    with_items: "{{ webConfigFiles }}"
+
+  - name: Synchronization Web Config Etc Folder using rsync protocol (pull)
+    ansible.posix.synchronize:
+      mode: pull
+      src: "{{ remoteWebConfigHome }}/{{ item }}"
+      dest: "{{ localWebConfigHome }}"
+    with_items: "{{ webEtcConfigFolders }}"

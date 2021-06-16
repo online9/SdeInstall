@@ -1,0 +1,63 @@
+- hosts: "{{ targetServers }}"
+  vars: 
+    shellFiles: 
+        - "ebsCtl.sh" 
+        - "eps.sh" 
+        - "elog.sh" 
+        - "ecd.sh" 
+        - "commons/commons.sh" 
+        - "commons/comVars.sh" 
+        - "commons/printUtils.sh" 
+        - "commons/psUtils.sh" 
+        - "commons/utils.sh"
+    utilsHome: "/data/utils"
+
+  tasks:
+    - name: Create Utils Folder
+      file:
+        path: "{{ utilsHome }}/{{ item }}"
+        state: directory
+        mode: 0755
+        recurse: yes
+      with_items: 
+        - "commons"
+  
+    - name: Copy Utils Files
+      copy:
+        src: "{{ utilsHome }}/{{ item }}"
+        dest: "{{ utilsHome }}/{{ item }}"
+        mode: 0755
+      with_items: "{{ shellFiles }}"
+
+    - name: Remove Previos alias from the .bashrc
+      lineinfile:
+        path: "~/.bashrc"
+        regexp: "{{ item }}"
+        state: absent
+      with_items:
+        - "^(alias estart=)"
+        - "^(alias ekill=)"
+        - "^(alias estop=)"
+        - "^(alias ectl=)"
+        - "^(alias eps=)"
+        - "^(alias elog=)"
+        - "^(alias ecd=)"
+        - "^(alias mspr=)"
+        - "^(# User specific aliases and functions)"
+
+    - name: Ensure virtualenv is sourced from the .bashrc
+      lineinfile:
+        path: "~/.bashrc"
+        regexp: "{{ item.key }}"
+        line: "{{ item.value }}"
+        insertafter: EOF
+        state: present
+      with_items:
+        - { key: "^(# User specific)", value: "# User specific aliases and functions" }
+        - { key: "^(alias estart=)", value: "alias ecd='/data/utils/ebsCtl.sh start'" }
+        - { key: "^(alias ekill=)", value: "alias ecd='/data/utils/ebsCtl.sh kill'" }
+        - { key: "^(alias estop=)", value: "alias ecd='/data/utils/ebsCtl.sh stop'" }
+        - { key: "^(alias ectl=)", value: "alias ectl='/data/utils/ebsCtl.sh'" }
+        - { key: "^(alias eps=)", value: "alias eps='/data/utils/eps.sh'" }
+        - { key: "^(alias elog=)", value: "alias elog='/data/utils/elog.sh'" }
+        - { key: "^(alias ecd=)", value: "alias ecd='. /data/utils/ecd.sh'" }

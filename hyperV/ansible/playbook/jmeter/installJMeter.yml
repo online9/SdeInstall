@@ -1,0 +1,39 @@
+- hosts: "{{ targetServers }}"
+  vars:
+    - jmeterVersion: "5.4.1"
+
+  tasks:
+  - name: Create Jmeter directory
+    file:
+      path: "/data/utils/monitoring"
+      state: directory
+      mode: 0755
+      recurse: yes
+
+  - name: Copy Jmeter File
+    copy:
+      src: "/data/utils/downloads/apache-jmeter-{{ jmeterVersion }}.tgz"
+      dest: "/data/utils/monitoring"
+
+  - name: Extract apache-jmeter-{{ jmeterVersion }}.tar.gz into /data/utils/monitoring
+    shell: tar -xzvf "/data/utils/monitoring/apache-jmeter-{{ jmeterVersion }}.tgz" -C "/data/utils/monitoring"
+
+  - name: Chmod Jmeter Shell
+    shell: |
+      chmod 755 /data/utils/monitoring/apache-jmeter-{{ jmeterVersion }}/bin/jmeter
+      chmod 755 /data/utils/monitoring/apache-jmeter-{{ jmeterVersion }}/bin/jmeter-server
+
+  - name: Modify jmeter.properties
+    shell: |
+        sed -i 's/#server.rmi.localport=4000/server.rmi.localport=4000/g' /data/utils/monitoring/apache-jmeter-{{ jmeterVersion }}/bin/jmeter.properties
+        sed -i 's/#server.rmi.ssl.disable=false/server.rmi.ssl.disable=true/g' /data/utils/monitoring/apache-jmeter-{{ jmeterVersion }}/bin/jmeter.properties
+
+  - name: Install java-1.8.0-openjdk
+    become: yes
+    ansible.builtin.package:
+      name: java-1.8.0-openjdk
+      state: present
+
+  - name: Start JMeter Server
+    shell: nohup /data/utils/monitoring/apache-jmeter-{{ jmeterVersion }}/bin/jmeter-server & 
+

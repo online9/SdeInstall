@@ -1,0 +1,20 @@
+---
+  - name: Define SVN Variables
+    set_fact:
+      svn_http_port: 80
+
+  - name: Open SVN Http port
+    include_tasks: "{{sdePath}}/open_firewall.yml"
+    vars:
+      work_name: "SVN"
+      protocol: "tcp"
+      port_info: 
+        - { protocol: "tcp", port: "{{ svn_http_port }}" }
+
+  - name: Install SVN Roles
+    include_role: 
+      name: "{{ rolevar }}"
+    loop:
+      - "{{ rolesPath }}/geerlingguy.svn"  
+    loop_control:
+      loop_var: rolevar

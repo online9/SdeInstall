@@ -1,0 +1,58 @@
+    - name: Remove deployments Symbloic link
+      file:
+        path: "{{ wasHome }}/{{ item }}"
+        state: absent
+      with_items: 
+        - "deployments"
+
+    - name: Create Deploy Home Folder
+      file:
+        path: "/p{{ domain_name }}/deploy/{{ biz_kind }}/was"
+        state: directory
+        owner: was
+        group: was
+        mode: 0755
+        recurse: yes
+
+    - name: Create WAS Home Folder
+      file:
+        path: "{{ wasHome }}/{{ item }}"
+        state: directory
+        owner: was
+        group: was
+        mode: 0755
+        recurse: yes
+      with_items: "{{ wasFolders }}"
+
+    - name: Copy Shell Files
+      copy:
+        src: "{{ wasBinHome }}/{{ item }}"
+        dest: "{{ wasBinHome }}/{{ item }}"
+        owner: was
+        group: was
+        mode: 0755
+      with_items: "{{ wasShellFiles }}"
+
+    - name: Copy Shell Files
+      copy:
+        src: "{{ localConfigHome }}/{{ item }}"
+        dest: "{{ wasBinHome }}/{{ item }}"
+        owner: was
+        group: was
+        mode: 0755
+      with_items: "{{ wasShellFiles }}"
+
+    - name: Copy Config Files
+      copy:
+        src: "{{ localConfigHome }}/{{ item }}"
+        dest: "{{ wasConfigHome }}/{{ item }}"
+        owner: was
+        group: was
+        mode: 0755
+      with_items: "{{ wasConfigFiles }}"
+
+    - name: Create a symbolic link
+      file:
+        src: "/p{{ domain_name }}/deploy/{{ biz_kind }}/was"
+        dest: "{{ deploymentsHome }}"
+        state: link

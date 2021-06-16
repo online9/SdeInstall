@@ -1,0 +1,69 @@
+- hosts: "{{ targetServers }}"
+  vars: 
+    nmonForLinux: "nmon16g_x86_rhel72"
+    nxmsHome: "/nc4i/sw/nxms"
+    nxmsDirs: ["jar", "bin", "prop", "sql"]
+    nxmsFiles: ["startCollector.sh",
+                "startServer.sh", 
+                "prop/nmon.conf",
+                "sql/writeMetric_15s.sql",
+                "sql/writeMetric_1h.sql",
+                "sql/writeMetric_1m.sql",
+                "sql/writeMetric_1s.sql",
+                "sql/writeMetric_30s.sql",
+                "sql/writeMetric_3s.sql",
+                "sql/writeMetric_5m.sql",
+                "jar/converter-moshi-2.4.0.jar",
+                "jar/influxdb-java-2.10.jar",
+                "jar/logging-interceptor-3.10.0.jar",
+                "jar/lombok-1.18.2.jar",
+                "jar/moshi-1.5.0.jar",
+                "jar/nxmsMonitoring.jar",
+                "jar/okhttp-3.10.0.jar",
+                "jar/okio-1.14.0.jar",
+                "jar/retrofit-2.4.0.jar",
+                "bin/healthCheck.sh",
+                "bin/oracleLongTerm.sh",
+                "bin/oracleShortTerm.sh",
+                "bin/sendHealthCheck.sh",
+                "bin/statMon.sh"]
+    osType: "{{ hostvars[inventory_hostname].ansible_distribution }}"
+    nodeName: "{{ hostvars[inventory_hostname].ansible_nodename }}"
+  tasks:
+    - debug: msg="Target Server OS => {{ osType }}, HostName => {{ nodeName }}"
+
+    - name: 1. Check nxms Monitoring Folder Exists
+      stat:
+        path: "{{ item }}"
+      loop: "{{ nxmsDirs }}"
+      register: statResult
+
+    - name: 2. Create nxms Monitoring Folder
+      file:
+        path: "{{ nxmsHome }}/{{ item }}"
+        state: directory
+        owner: weblogic
+        group: app
+        mode: 0775
+        recurse: yes
+      with_items: 
+        - "{{ nxmsDirs }}"
+
+    - name: 3. Copy Linux NMON
+      copy:
+          src: "/sde/installSW/{{ nmonForLinux }}"
+          dest: "/nc4i/sw/nxms/bin/nmon"
+          owner: weblogic
+          group: app
+          mode: 0755
+      when: osType != "AIX"
+
+    - name: 4. Copy Nxms Monitoring File
+      copy:
+          src: "/sde/nxms/{{ item }}"
+          dest: "/nc4i/sw/nxms/{{ item }}"
+          owner: weblogic
+          group: app
+          mode: 0755
+      with_items: "{{ nxmsFiles }}"
+

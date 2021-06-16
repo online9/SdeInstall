@@ -1,0 +1,18 @@
+#Ansible Host Sde-Support
+
+[all:vars]
+ansible_ssh-common-args="-o strictHostKeyChecking=no"
+
+[all:children]
+SdeSupport
+
+[SdeSupport]
+Sde-Awx ansible_host=172.18.0.1 server_type=ansible server_name=awx
+Sde-Scm ansible_host=172.18.0.2 server_type=scm server_name=gitlab
+Sde-CodeReview ansible_host=172.18.0.3 server_type=codereview server_name=gerrit
+Sde-Issue ansible_host=172.18.0.4 server_type=issue server_name=redmine
+Sde-CiCd ansible_host=172.18.0.5 server_type=ci server_name=jenkins
+Sde-Sonar ansible_host=172.18.0.6 server_type=analysis server_name=sonarqube
+Sde-Repo ansible_host=172.18.0.7 server_type=repository server_name=nexus
+Sde-Mon ansible_host=172.18.0.8 server_type=monitoring server_name=grafana,influx
+

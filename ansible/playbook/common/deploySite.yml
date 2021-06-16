@@ -1,0 +1,9 @@
+    siteDeployConfig: 
+      - { JOB_TITLE : "고교강의",    DOMAIN_NAME : "HSC",  JOB_ID : "Hsc", WAS_LIST : "hsp,hap,dyn,bot,hai,mng,prm,tch,chk,bmn,lrm,eas", WEB_LIST : "hsp,hap,dyn,bot,hai,mng,prm,tch,chk,bmn,lrm,eas,image" }
+      - { JOB_TITLE : "영어",      DOMAIN_NAME : "ENG",  JOB_ID : "Eng", WAS_LIST : "eng,mng,enh,ets,epm,dnm", WEB_LIST : "eng,mng,enh,ets" }
+      - { JOB_TITLE : "수학",      DOMAIN_NAME : "MAT",  JOB_ID : "Mat", WAS_LIST : "msp,mng,mpm", WEB_LIST : "msp,mng,mpm" }
+      - { JOB_TITLE : "중학웹",     DOMAIN_NAME : "JHS",  JOB_ID : "Jhs", WAS_LIST : "jws,jms", WEB_LIST : "jws,jms" }
+      - { JOB_TITLE : "초등웹",     DOMAIN_NAME : "PRI",  JOB_ID : "Pri", WAS_LIST : "pws,mgi,mge,pms", WEB_LIST : "pws,mgi,mge,pms" }
+      - { JOB_TITLE : "메인",      DOMAIN_NAME : "MAN",  JOB_ID : "Man", WAS_LIST : "man,hom,mob,spc,eid,etc,prv,cot", WEB_LIST : "man,hom,mob,spc,eid,etc,prv,cot,image" }
+      - { JOB_TITLE : "API",     DOMAIN_NAME : "API",  JOB_ID : "Api", WAS_LIST : "blg,srh,lms,brd,itp,efs", WEB_LIST : "blg" }
+      - { JOB_TITLE : "공통플랫폼",  DOMAIN_NAME : "CMP",  JOB_ID : "Cmp", WAS_LIST : "csr,lhb,stt,abu,bmm,cmp,ism,sso,lhb,blg,key", WEB_LIST : "csr,lhb,stt,abu,bmm,cmp,ism,sso,sso,lhb,blg" }

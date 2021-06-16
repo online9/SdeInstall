@@ -1,0 +1,8 @@
+- hosts: "{{ targetServers }}"
+  vars:
+    playbookHome: "/data/utils/ansible/playbook"
+
+  tasks:
+    - name: Set a hostname
+      ansible.builtin.hostname:
+        name: "prd-{{ domain_name }}-{{ biz_kind }}-{{ app_type }}-{{ server_type }}-{{ node_id }}"

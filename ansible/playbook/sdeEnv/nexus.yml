@@ -1,0 +1,29 @@
+---
+  - set_fact:
+      nexus_http_port: 8081
+      nexus_admin_password: 'admin123'
+      nexus_default_admin_password: 'admin123'
+
+  - name: Open Nexus Http port
+    include_tasks: "{{sdePath}}/open_firewall.yml"
+    vars:
+      work_name: "SonarType Nexus"
+      port_info: 
+        - { protocol: "tcp", port: "{{ nexus_http_port }}" }
+
+  - name: Install package dependencies.
+    package:
+      name: "{{ item }}"
+      state: "present"
+    with_items:
+      - git
+      - unzip
+
+  - name: Install Nexus Roles
+    include_role: 
+      name: "{{ rolevar }}"
+    loop:
+      - "{{ rolesPath }}/geerlingguy.java"  
+      - "{{ rolesPath }}/ansible-thoteam.nexus3-oss"   
+    loop_control:
+      loop_var: rolevar

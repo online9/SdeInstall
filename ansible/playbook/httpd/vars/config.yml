@@ -1,0 +1,42 @@
+    webHome: "/data/web"
+    webBinHome: "{{ webHome }}/bin"
+    webConfigHome: "{{ webHome }}/conf"
+
+    remoteWebHome: "/data/servers/web"
+    
+    webName: "Httpd"
+    webVersion: "2.4.3"
+
+    webFolders: 
+        - "bin"
+        - "conf"
+        - "conf/acl"
+        - "conf/cert"
+        - "conf/extra"
+        - "conf/modjk"
+
+    webShellFiles:
+        - "apachectl"
+        - "env.sh"
+        - "kill.sh"
+        - "restart.sh"
+        - "shutdown.sh"
+        - "start.sh"
+        - "status.sh"
+
+    webConfigFiles:
+        - "httpd.conf"
+        - "httpd-ssl.conf"
+
+    webEtcConfigFolders:
+        - "acl"
+        - "cert"
+        - "extra"
+        - "modjk"
+    
+    localWebConfigHome: "{{ configRepoHome }}/web/{{ inventory_hostname }}/conf"
+    remoteWebConfigHome: "{{ remoteWebHome }}/{{ serverPrefix }}/{{ instanceId }}/conf"
+
+    localWebShellHome: "{{ configRepoHome }}/web/{{ inventory_hostname }}/bin"
+    remoteWebShellHome: "{{ remoteWebHome }}/{{ serverPrefix }}/{{ instanceId }}/bin"
+    

@@ -1,0 +1,27 @@
+- hosts: "{{ targetServers }}"
+  vars: 
+    monitoringHome: "/data/utils/monitoring"
+    binaryList: 
+      - { dest: ".", url: "https://dl.influxdata.com/influxdb/releases/influxdb-1.8.4_linux_amd64.tar.gz" }
+      - { dest: ".", url: "https://dl.influxdata.com/telegraf/releases/telegraf-1.17.3_linux_amd64.tar.gz" }
+      - { dest: ".", url: "https://dl.grafana.com/oss/release/grafana-7.4.3.linux-amd64.tar.gz" }
+      - { dest: ".", url: "https://jaist.dl.sourceforge.net/project/nmon/nmon16m_helpsystems.tar.gz" }
+
+  tasks:
+    - name: Create Utils Folder
+      file:
+        path: "{{ monitoringHome }}"
+        state: directory
+        owner: sicc
+        group: sicc
+        mode: 0755
+        recurse: yes
+      with_items:
+        - nmon
+  
+    - name: Unarchive a file that needs to be downloaded
+      ansible.builtin.unarchive:
+        src: "{{ item.url }}"
+        dest: "{{ monitoringHome }}/{{ item.dest }}"
+        remote_src: yes
+      with_items: "{{ binaryList }}"

@@ -1,0 +1,139 @@
+- hosts: "{{ targetServers }}"
+  vars: 
+    utilsHome: "/data/utils"
+    serversHome: "/data/servers/redis"
+    enginesHome: "/svr/engines"
+    redisBinary: "redis-{{ redisVersion | default('5.0.8') }}"
+
+    targetServerName: "redis"
+    playbookHome: "/data/utils/ansible/playbook"
+    
+  tasks:
+    - community.general.pam_limits:
+        domain: root
+        limit_type: hard
+        limit_item: nofile
+        value: 65535
+
+    - community.general.pam_limits:
+        domain: root
+        limit_type: soft
+        limit_item: nofile
+        value: 65535
+ 
+    - community.general.pam_limits:
+        domain: root
+        limit_type: hard
+        limit_item: nproc
+        value: 65535
+
+    - community.general.pam_limits:
+        domain: root
+        limit_type: soft
+        limit_item: nproc
+        value: 65535
+    
+    - name: Put SELinux in permissive mode, logging actions that would be blocked.
+      ansible.posix.selinux:
+        policy: targeted
+        state: permissive
+
+    - ansible.posix.sysctl:
+        name: vm.overcommit_memory
+        value: '1'
+        state: present
+    
+    - ansible.posix.sysctl:
+        name: net.core.somaxconn
+        value: '65535'
+        state: present
+
+    - ansible.posix.sysctl:
+        name: vm.max_map_count
+        value: '262144'
+        state: present
+
+    - ansible.posix.sysctl:
+        name: vm.swappiness
+        value: '1'
+        state: present
+
+    - name: Append HugePage
+      shell: echo never > /sys/kernel/mm/transparent_hugepage/enabled
+
+#    - ansible.posix.firewalld:
+#        zone: public
+#        port: 6379-6382/udp
+#        permanent: yes
+#        state: enabled
+#        immediate: true
+
+    - name: Turn off firewall for install
+      systemd:
+       name: firewalld
+       state: stopped
+       enabled: false
+
+    - name: Create Redis Engine Folder
+      file:
+        path: "/svr/{{ item }}"
+        state: directory
+        mode: 0755
+        recurse: yes
+      with_items: 
+        - "engines"
+        - "install_files"
+        
+    - name: Create Redis Folder
+      file:
+        path: "{{ serversHome }}/{{ item }}"
+        state: directory
+        mode: 0755
+        recurse: yes
+      with_items: 
+        - "master"
+
+    - name: Copy Redis Config Files
+      copy:
+          src: "{{ playbookHome }}/{{ targetServerName }}/templates/redis.conf"
+          dest: "{{ serversHome }}/{{ item.node }}/redis_{{ item.port }}.conf"
+          mode: 0644
+      with_items: 
+          - { node : "master", port : "6382"}
+       
+    - name: Modify Redis Config File
+      shell: | 
+        sed -i "s/%{nodeId}/{{ item.node }}/g" {{ serversHome }}/{{ item.node }}/redis_{{ item.port }}.conf 
+        sed -i "s/%{port}/{{ item.port }}/g" {{ serversHome }}/{{ item.node }}/redis_{{ item.port }}.conf
+      with_items: 
+          - { node : "master", port : "6382"}
+
+    - name: Create Utils Folder
+      file:
+        path: "{{ utilsHome }}/{{ item }}"
+        state: directory
+        mode: 0755
+        recurse: yes
+      with_items: 
+        - "commons"
+
+    - name: Copy Redis Util Shell Files
+      copy:
+          src: "{{ playbookHome }}/{{ targetServerName }}/templates/{{ item }}"
+          dest: "{{ utilsHome }}/{{ item }}"
+          mode: 0755
+      with_items: 
+          - "startRedis.sh"
+          - "stopRedis.sh"
+
+    - name: Download Redis Binary
+      get_url: url=https://download.redis.io/releases/{{ redisBinary }}.tar.gz dest=/svr/install_files/{{ redisBinary }}.tar.gz
+      
+    - name: Extract /svr/install_files/{{ redisBinary }}.tar.gz into {{ enginesHome }}
+      shell: tar -xzvf "/svr/install_files/{{ redisBinary }}.tar.gz" -C "{{ enginesHome }}"
+
+    - name: Make & Install
+      shell: cd "/svr/engines/{{ redisBinary }}"; make && make install
+
+    - name: Start Redis Server
+      shell: /data/utils/startRedis.sh

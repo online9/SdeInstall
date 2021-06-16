@@ -1,0 +1,4 @@
+---
+- hosts: "{{ targetServers }}"
+  roles:
+    - ./roles/dj-wasabi.telegraf

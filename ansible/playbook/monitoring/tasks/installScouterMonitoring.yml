@@ -1,0 +1,51 @@
+- hosts: "{{ targetServers }}"
+  vars: 
+    scouterHome: "/nc4i/sw/scouter"
+    scouterDirs: ["jar", "nmon", "prop", "shell", "sql"]
+    scouterFiles: ["startCollector.sh",
+                   "startServer.sh", 
+                   "prop/nmon.conf",
+                   "shell/statMon.sh"]
+    osType: "{{ hostvars[inventory_hostname].ansible_distribution }}"
+    nodeName: "{{ hostvars[inventory_hostname].ansible_nodename }}"
+  tasks:
+    - debug: msg="Target Server OS => {{ osType }}, HostName => {{ nodeName }}"
+
+#    - name: 1. Check scouter Monitoring Folder Exists
+#      stat:
+#        path: "{{ item }}"
+#      loop: "{{ scouterDirs }}"
+#      register: statResult
+
+    - name: 2. Create scouter Monitoring Folder
+      file:
+        path: "{{ scouterHome }}/{{ item }}"
+        state: directory
+        owner: weblogic
+        group: app
+        mode: 0775
+        recurse: yes
+      with_items: 
+#      with_together: 
+        - "{{ scouterDirs }}"
+#        - "{{ statResult.results }}"
+#      when: item.1.stat.exists == False
+
+    - name: 3. Copy Linux NMON
+      copy:
+          src: "/sde/installSW/nmon"
+          dest: "/nc4i/sw/scouter/nmon/nmon"
+          owner: weblogic
+          group: app
+          mode: 0755
+      when: osType != "AIX"
+
+    - name: 4. Copy Nxms Monitoring File
+      copy:
+          src: "/sde/Monitoring/scouter/{{ item }}"
+          dest: "/nc4i/sw/scouter/{{ item }}"
+          owner: weblogic
+          group: app
+          mode: 0755
+      with_items: "{{ scouterFiles }}"
+

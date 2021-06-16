@@ -1,0 +1,8 @@
+    - name: Download Redis Binary
+      get_url: url=https://download.redis.io/releases/{{ redisBinary }}.tar.gz dest=/svr/install_files/{{ redisBinary }}.tar.gz
+      
+    - name: Extract /svr/install_files/{{ redisBinary }}.tar.gz into {{ enginesHome }}
+      shell: tar -xzvf "/svr/install_files/{{ redisBinary }}.tar.gz" -C "{{ enginesHome }}"
+
+    - name: Make & Install
+      shell: cd "/svr/engines/{{ redisBinary }}"; make && make install

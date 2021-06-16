@@ -1,0 +1,33 @@
+- hosts: "{{ targetServers }}"
+
+  tasks:
+  - name: Add telegraf repository
+    yum_repository:
+      name: influxdb
+      description: InfluxDB Repository - RHEL $releasever
+      baseurl: https://repos.influxdata.com/rhel/$releasever/$basearch/stable
+      gpgcheck: yes
+      gpgkey: https://repos.influxdata.com/influxdb.key
+
+  - name: Install telegraf
+    yum:
+      name: telegraf
+      state: latest
+
+  - name: Copy config
+    copy:
+      src: /data/utils/ansible/telegraf.conf
+      dest: /etc/telegraf/telegraf.conf
+      owner: root
+      group: root
+      mode: 0644
+      backup: yes
+      force: no
+      notify:
+      - restart telegraf
+
+  handlers:
+  - name: restart telegraf
+    service:
+      name: telegraf
+      state: restarted

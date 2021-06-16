@@ -1,0 +1,40 @@
+- hosts: "{{ targetServers }}"
+  vars: 
+    shellFiles: 
+      - "ebsCtl.sh", 
+      - "eps.sh", 
+      - "elog.sh", 
+      - "commons/commons.sh", 
+      - "commons/comVars.sh", 
+      - "commons/printUtils.sh", 
+      - "commons/psUtils.sh", 
+      - "commons/utils.sh"]
+      - "startRedis.sh"
+      - "stopRedis.sh"
+      - "createRedisCluster.sh"
+
+    utilsHome: "/data/utils"
+              
+  tasks:
+    - name: Create Utils Folder
+      file:
+        path: "{{ utilsHome }}/{{ item }}"
+        state: directory
+        mode: 0755
+        recurse: yes
+      with_items: 
+        - "commons"
+
+    - name: Copy Redis Utils Files
+      copy:
+          src: "{{ utilsHome }}/{{ item }}"
+          dest: "{{ utilsHome }}/{{ item }}"
+          mode: 0755
+      with_items: "{{ shellFiles }}"
+
+    - name: Copy Redis Util Files
+      copy:
+          src: "{{ utilsHome }}/env/{{ item }}"
+          dest: "{{ utilsHome }}/{{ item }}"
+          mode: 0755
+      with_items: 

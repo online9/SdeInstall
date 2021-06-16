@@ -1,0 +1,63 @@
+---
+  - name: Define variables for Ruby
+    set_fact:
+      ruby_version: 2.7.3
+      ruby_install_gems_user: redmine
+      ruby_install_bundler: true
+      ruby_install_from_source: true
+      ruby_rubygems_package_name: rubygems
+      ruby_download_url: http://cache.ruby-lang.org/pub/ruby/2.7/ruby-2.7.3.tar.gz
+
+  - name: Define variables for MariaDB
+    set_fact:
+      mariadb_root_password: "password"
+      mariadb_databases:
+        - name: redmine
+          encoding: utf8
+          collation: utf8_general_ci
+      mariadb_users:
+        - name: redmine
+          host: "%"
+          password: redmine
+          priv: "redmine.*:ALL"
+
+  - name: Define variables for Redmine
+    set_fact:
+      centos_base_enable_epel: true
+      centos_base_basic_packages: true
+      redmine_http_port: 8080
+      redmine_sql_username: redmine
+      redmine_sql_password: redmine
+      redmine_sql_database_name: redmine
+      remmine_sql_database_host: localhost
+      redmine_version: 4.2.1
+      redmine_nginx_bind_ip: "{{ ansible_host }}"
+      redmine_configure_selinux: yes
+       
+  - name: Open Redmine Http port
+    include_tasks: "{{sdePath}}/open_firewall.yml"
+    vars:
+      work_name: "Redmine"
+      port_info:
+        - { protocol: "http", port: "service" }
+        - { protocol: "https", port: "service" }
+        - { protocol: "tcp", port: "{{ redmine_http_port }}" }
+
+  - name: Install package dependencies.
+    package:
+      name: "{{ item }}"
+      state: "present"
+    with_items:
+      - libselinux-python
+      - policycoreutils-python
+
+  - name: Install Redmine Roles
+    include_role: 
+      name: "{{ rolevar }}"
+    loop:
+      - "{{ rolesPath }}/geerlingguy.ruby"  
+#      - "{{ rolesPath }}/bngsudheer.centos_base"
+      - "{{ rolesPath }}/bertvv.mariadb"
+      - "{{ rolesPath }}/bngsudheer.redmine"
+    loop_control:
+      loop_var: rolevar

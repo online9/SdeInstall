@@ -1,0 +1,22 @@
+- hosts: "{{ targetServers }}"
+  vars:
+    jenkinsJobsHome: "/data/jenkins-master/template/jobs"
+    jenkinsCli: "java -jar /data/utils/build/bin/libs/jenkins-cli.jar -auth jenkins:jenkins!1 -s http://{{ jenkinsSvrIp }}/ -webSocket"
+
+  vars_files:
+     - /data/utils/ansible/config/ebsSiteBuildConfig.yml
+     - /data/utils/ansible/config/ebsSiteDeployConfig.yml
+
+
+  tasks:
+    - name: Create Jenkins Deploy Jobs
+      shell: "{{ jenkinsCli }} create-job Deploy-{{ item.JOB_ID }} < {{ jenkinsJobsHome }}/Deploy-{{ item.JOB_ID }}/config.xml"
+      with_items: "{{ siteDeployConfig }}"
+
+    - name: Create Jenkins Packaging Jobs
+      shell: "{{ jenkinsCli }} create-job Packaging-{{ item.JOB_ID }} < {{ jenkinsJobsHome }}/Packaging-{{ item.JOB_ID }}/config.xml"
+      with_items: "{{ siteDeployConfig }}"
+
+    - name: Create Jenkins Build Jobs
+      shell: "{{ jenkinsCli }} create-job {{ item.JOB_ID }}_{{ item.BIZ_KIND }}-{{ item.SVR_TYPE }} < {{ jenkinsJobsHome }}/Deploy-{{ item.JOB_ID }}/config.xml"
+      with_items: "{{ siteBuildConfig }}"

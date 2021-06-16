@@ -1,0 +1,27 @@
+- hosts: "{{ targetServers }}"
+  vars:
+    playbookHome: "/data/utils/ansible/playbook"
+
+  tasks:
+    - name: Create Utils Folder
+      file:
+        path: "/data/utils/commons"
+        state: directory
+        mode: 0755
+        recurse: yes
+
+    - name: Copy Ebs Server Control Shell
+      copy:
+          src: "/data/utils/{{ item }}"
+          dest: "/data/utils/{{ item }}"
+          mode: 0755
+      with_items:
+          - "ebsCtl.sh"
+          - "ecd.sh"
+          - "elog.sh"
+          - "eps.sh"
+          - "commons/commons.sh"
+          - "commons/comVars.sh"
+          - "commons/printUtils.sh"
+          - "commons/psUtils.sh"
+          - "commons/utils.sh"

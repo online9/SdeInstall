@@ -1,0 +1,18 @@
+    - name: Copy Redis Config Files
+      copy:
+          src: "{{ utilsHome }}/conf/redis.conf"
+          dest: "{{ serversHome }}/{{ item.node }}/redis_{{ item.port }}.conf"
+          mode: 0644
+      with_items: 
+          - { node : "master", port : "6379"}
+          - { node : "slave1", port : "6380"}
+          - { node : "slave2", port : "6381"}
+       
+    - name: Modify Redis Config File
+      shell: | 
+        sed -i "s/%{nodeId}/{{ item.node }}/g" {{ serversHome }}/{{ item.node }}/redis_{{ item.port }}.conf 
+        sed -i "s/%{port}/{{ item.port }}/g" {{ serversHome }}/{{ item.node }}/redis_{{ item.port }}.conf
+      with_items: 
+          - { node : "master", port : "6379"}
+          - { node : "slave1", port : "6380"}
+          - { node : "slave2", port : "6381"}

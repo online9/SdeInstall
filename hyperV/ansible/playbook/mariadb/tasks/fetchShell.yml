@@ -1,0 +1,14 @@
+  - name: Create Local MariaDB Control Shell directory
+    file:
+      path: "{{ localDbShellHome }}"
+      state: directory
+      recurse: yes
+    delegate_to: localhost
+
+  - name: Fetch MariaDB Server Controll Shell File
+    become: yes
+    ansible.builtin.fetch:
+        src: "{{ remoteDbShellHome }}/{{ item }}"
+        dest: "{{ localDbShellHome }}/{{ item }}"
+        flat: yes
+    with_items: "{{ dbShellFiles }}"

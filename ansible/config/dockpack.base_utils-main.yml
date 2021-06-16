@@ -1,0 +1,19 @@
+---
+
+base_utils:
+  - git
+  - iotop
+  - iptraf
+  - lsof
+  - nano
+  - net-tools
+  - nmap
+  - psmisc
+  - sysstat
+  - tcpdump
+  - telnet
+  - traceroute
+  - wget
+  - nfs-utils
+  - epel-release
+  - nmon 

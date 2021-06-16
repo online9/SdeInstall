@@ -1,0 +1,59 @@
+---
+  - name: Define Influx Variables
+    set_fact:
+      influxdb_udp_port: 8089
+      influxdb_http_port: 8086
+      target_databases:
+        - { section: "[http]", bind_address: "8086", database: "scouter", is_multiple_section: "false" }
+        - { section: "[[udp]]", bind_address: "8089", database: "telegraf", is_multiple_section: "true" }
+
+  - name: Open Influx Udp/Http port
+    include_tasks: "{{sdePath}}/open_firewall.yml"
+    vars:
+      work_name: "Influx"
+      port_info: 
+        - { protocol: "udp", port: "{{ influxdb_udp_port }}" }
+        - { protocol: "tcp", port: "{{ influxdb_http_port }}" }
+
+  - name: Install Influx Roles
+    include_role: 
+      name: "{{ rolevar }}"
+    loop:
+      - "{{ rolesPath }}/alvistack.influxdb"
+    loop_control:
+      loop_var: rolevar
+
+  - name: Enable InfluxDB Database
+    become: yes
+    shell: |
+      isExist=`cat /etc/influxdb/influxdb.conf | grep {{ item.database }}`
+      if [ "${isExist}" != "" ]; then
+        exit 0
+      fi
+      cat /etc/influxdb/influxdb.conf | awk -v is_multiple="{{ item.is_multiple_section }}" '{
+      	print
+        if ($1 == "{{ item.section }}") {
+          printf "  enabled = true\n"
+          printf "  bind-address = \":{{ item.bind_address }}\"\n"
+          printf "  database = \"{{ item.database }}\"\n\n"
+          if (is_multiple == "true") {
+            printf "{{ item.section }}\n"
+          } 
+        }
+      }' > /etc/influxdb/influxdb.conf_new
+      mv /etc/influxdb/influxdb.conf_new /etc/influxdb/influxdb.conf
+    with_items: "{{ target_databases }}"
+  
+  - name: systemctl restart influxdb.service
+    service:
+      name: "influxdb.service"
+      state: "restarted"
+      enabled: true
+    changed_when: false
+    ignore_errors: true
+
+  - name: Create InfluxDB Database
+    become: yes
+    shell: |
+      influx -execute 'CREATE DATABASE {{ item.database }}'
+    with_items: "{{ target_databases }}"

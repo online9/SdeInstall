@@ -1,0 +1,10 @@
+---
+  - name: Open {{ work_name }} Port
+    become: yes
+    shell: |
+      if [ "{{ item.protocol }}" == "tcp" -o "{{ item.protocol }}" == "udp" ]; then 
+        iptables -I INPUT 1 -p {{ item.protocol }} --dport {{ item.port }} -j ACCEPT
+      else
+        firewall-cmd --permanent --zone=public --add-service={{ item.protocol }}
+      fi
+    with_items: "{{ port_info }}"

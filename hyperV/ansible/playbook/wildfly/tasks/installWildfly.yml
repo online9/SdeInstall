@@ -1,0 +1,45 @@
+    - name: Ensure group "was" exists with correct gid
+      ansible.builtin.group:
+        name: was
+        state: present
+        gid: 1002
+
+    - name: Ensure group "deploy" exists with correct gid
+      ansible.builtin.group:
+        name: deploy
+        state: present
+        gid: 1003
+    
+    - name: Add the user 'was' with a specific uid and a primary group of 'was'
+      ansible.builtin.user:
+        name: was
+        comment: Wildfly Operator
+        uid: 1002
+        group: was
+        groups: deploy
+
+    - name: Create Server Home
+      file:
+        path: "{{ serverHome }}"
+        state: directory
+        mode: 0755
+    
+    - name: Create WAS Engine Folder
+      file:
+        path: "{{ engineHome }}"
+        state: directory
+        owner: was
+        group: was
+        mode: 0755
+        recurse: yes
+
+    - name: Unarchive a file
+      ansible.builtin.unarchive:
+        src: "{{ downloadsHome }}/{{ wasName }}-{{ wasVersion }}.tar.gz"
+        dest: "{{ engineHome }}"
+
+    - name: Create a symbolic link
+      file:
+        src: "{{ engineHome }}/{{ wasName }}-{{ wasVersion }}"
+        dest: "{{ engineHome }}/{{ wasName }}"
+        state: link

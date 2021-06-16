@@ -1,0 +1,15 @@
+#Ansible Host KubeSupport
+ 
+[all:vars]
+"ansible_ssh-common-args="-o strictHostKeyChecking=no"
+ 
+[all:children]
+KubeSupport
+ 
+[KubeSupport]
+KubeSupportAwx ansible_host=172.18.0.1 install_jdk=yes server_type=ansible server_name=awx
+KubeSupportScm ansible_host=172.18.0.2 install_jdk=yes server_type=scm server_name=svn
+KubeSupportCiCd ansible_host=172.18.0.3 install_jdk=yes server_type=ci server_name=jenkins
+KubeSupportSonar ansible_host=172.18.0.4 install_jdk=yes server_type=static_analysis server_name=sonarqube
+KubeSupportRepo ansible_host=172.18.0.5 install_jdk=yes server_type=repository server_name=nexus
+KubeSupportMonitoring ansible_host=172.18.0.6 server_type=monitoring server_name=grafana

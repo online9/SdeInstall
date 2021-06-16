@@ -1,0 +1,49 @@
+---
+  - name: Define AWX ansible Variables
+    set_fact:
+      awx_http_port: 80
+
+  - name: Modify AWX ansible inventory for 
+    become: yes
+    shell: |
+      sed -i "s/awx_version: devel/awx_version: 17.0.1/g" {{ rolesPath}}/roles/geerlingguy.awx/defaults/main.yml
+      isExist=`cat {{ rolesPath}}/geerlingguy.awx/tasks/main.yml | grep "Modify AWX inventory"`
+      if [ "${isExist}" != "" ]; then
+        exit 0
+      fi
+      cat {{ rolesPath}}/geerlingguy.awx/tasks/main.yml | awk '{
+        if ($0 == "- include: awx-install-playbook.yml") {
+          printf "- name: Modify AWX inventory\n"
+          printf "  shell: sed -i \"s/# admin_password=password/admin_password=password/g\" ~/awx/installer/inventory\n\n"
+        }
+        print
+      }' > {{ rolesPath}}/geerlingguy.awx/tasks/main.yml_new
+      mv {{ rolesPath}}/geerlingguy.awx/tasks/main.yml_new {{ rolesPath}}/geerlingguy.awx/tasks/main.yml
+
+  - name: Open AWX Http port
+    include_tasks: "{{sdePath}}/open_firewall.yml"
+    vars:
+      work_name: "AWX"
+      port_info: 
+        - { protocol: "tcp", port: "{{ awx_http_port }}" }
+
+  - name: Install docker-compose
+    shell: pip install docker-compose
+
+  - name: Install package dependencies.
+    package:
+      name: "{{ item }}"
+      state: "present"
+    with_items:
+      - git
+
+  - name: Install AWX Roles
+    include_role: 
+      name: "{{ rolevar }}"
+    loop:
+      - "{{ rolesPath }}/geerlingguy.java"  
+      - "{{ rolesPath }}/geerlingguy.nodejs"
+      - "{{ rolesPath }}/geerlingguy.docker"
+      - "{{ rolesPath }}/geerlingguy.awx"   
+    loop_control:
+      loop_var: rolevar

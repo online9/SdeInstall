@@ -1,0 +1,11 @@
+- hosts: "{{ targetServers }}"
+  vars:
+    playbookHome: "/data/utils/ansible/playbook"
+
+  tasks:
+    - name: Synchronization /data/config using rsync protocol (pull)
+      ansible.posix.synchronize:
+        src: /data/config/
+        dest: /data/config/
+        mode: pull
+

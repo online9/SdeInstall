@@ -1,0 +1,56 @@
+# howToCreateVm
+# 0 : Same Type   => Enter the Start IP and hostname pattern.
+# 1 : Custom Type => Enter the IP and hostname list directly."
+[General]
+howToCreateVm=0
+totalVm=16
+baseOsName=BaseVm-CentOS7.9
+processorCount=8
+vmGeneration=2
+vmBasePath=M:\Hyper-V_BaseVM
+targetVmPath=I:\Hyper-V_Kubenetes
+resetShellFilePath=../shell/
+resetShellFile=resetHost.sh
+startUp=yes
+pingTest=yes
+
+[Ansible]
+addAnsibleHost=yes
+addAnsibleHostPath=ansible/hosts
+addAnsibleHostFile=KubeNode.ini
+addAnsibleHostGroup=KubeNode
+# Instead of the '=', use ':', Finally, ':' is replaced with the '='.
+addAnsibleHostOptions=ssh_user:online9
+
+[Memory:MB]
+vmMemorySize=512
+dynamicMemoryEnabled=true
+dynamicStartupBytes=4096
+dynamicMinimumBytes=4096
+dynamicMaximumBytes=8192
+
+#ipRange
+# 1 : 10.0.0.0    ~ 10.255.255.255
+# 2 : 172.16.0.0  ~ 172.31.255.255
+# 3 : 192.168.0.0 ~ 192.168.255.255
+[Network]
+preset=yes
+ipRange=2
+switchName=Kube-VirtualSwitch
+#baseVmIp=172.16.7.9
+#targetIp=
+startIp=172.21.79.11
+#netmask=255.240.0.0
+#gatewayIp=172.16.0.1
+dns1=8.8.8.8
+dns2=
+mtu=9000
+search=online9.com
+
+[Host]
+vmNameTemplate=KubeNode%{seq}
+hostNameTemplate=kube-node-%{seq}
+
+[User]
+user=root
+password=vfp60cap@622527
