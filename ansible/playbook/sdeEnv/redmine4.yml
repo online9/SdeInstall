@@ -10,8 +10,10 @@
 
   - name: Define variables for Redmine
     set_fact:
-      src_folder: "/usr/local/src" 
+      src_folder: "/usr/local/src"
       redmine_home: "/home/{{redmine_username}}/redmine-{{ redmine_version }}" 
+      redmine_nginx_home: "/opt/ngnix" 
+      redmine_nginx_service_path: "/usr/lib/systemd/system" 
 
   - name: Define variables for Ruby
     set_fact:
@@ -103,15 +105,28 @@
     become_user: "{{ redmine_username }}"
     with_items: 
       - "bundle install --without development test --path vendor/bundle"
-      - "bundle exec rake generate_secret_tokenRAILS_ENV=production"
-      - "bundle exec rake db:migrate"
+      - "bundle exec rake generate_secret_token"
+      - "RAILS_ENV=production bundle exec rake db:migrate"
       - "bundle exec rake redmine:load_default_data RAILS_ENV=production REDMINE_LANG=ko"
 
   - name: Install passenger nginx module
     ansible.builtin.shell: 
       cmd: "passenger-install-nginx-module --auto"
 
+  - name: Template a file to Config/Nginx 
+    ansible.builtin.template:
+      src: "{{ item.src }}"
+      dest: "{{ item.dest }}"
+    with_items: 
+      - { src: "{{ sdePath }}/templates/redmine.conf.j2", dest: "{{ redmine_home }}/config/configuration.yml", owner: "{{ redmine_username }}" }
+      - { src: "{{ sdePath }}/templates/redmine-database.conf.j2", dest: "{{ redmine_home }}/config/database.yml", owner: "{{ redmine_username }}" }
+      - { src: "{{ sdePath }}/templates/redmine-nginx.conf.j2", dest: "{{ redmine_nginx_home }}/conf/host/redmine.conf", owner: "{{ redmine_username }}" }
+      - { src: "{{ sdePath }}/templates/redmine-nginx-service.conf.j2", dest: "{{ redmine_nginx_service_path }}/ngninx.service", owner: "root" }
 
+  - name: Template a file to Config/Nginx 
+    shell: |
+      sed -i "/#gzip/a\/include host\/*.conf;" {{ redmine_nginx_home }}/conf/nginx.conf
+      sed -i "/charset/c\charset utf-8;" {{ redmine_nginx_home }}/conf/nginx.conf
 
   - name: Restart service Nginx, in all cases
     ansible.builtin.service:
