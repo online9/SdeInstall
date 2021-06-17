@@ -7,6 +7,8 @@
       redmine_password: redmine
       redmine_database_name: redmine
       remmine_database_host: localhost
+      ruby_version: 2.7.3
+      rubygems_version: 3.1.4
 
   - name: Define variables for Redmine
     set_fact:
@@ -15,29 +17,19 @@
       redmine_nginx_home: "/opt/ngnix" 
       redmine_nginx_service_path: "/usr/lib/systemd/system" 
 
-  - name: Define variables for Ruby
-    set_fact:
-      ruby_version: 2.7.3
-      rubygems_version: 3.1.4
-      ruby_gems: 
-        - { name: "bundler" } 
-        - { name: "ruby-shadow" } 
-        - { name: "rails", build_flags: "-V" } 
-        - { name: "passenger", build_flags: "-no-ri -no-rdoc" }
-
   - name: Define variables for Build Sources
     set_fact:
       build_sources:
         - url: "http://cache.ruby-lang.org/pub/ruby/{{ ruby_version.split('.')[0] }}.{{ ruby_version.split('.')[1] }}/ruby-{{ ruby_version }}.tar.gz"
           dest: "{{ src_folder }}"
-          chdir: "ruby-{{ ruby_version }}"
+          chdir: "{{ src_folder }}/ruby-{{ ruby_version }}"
           cmd: "./configure --disable-install-doc; make && make install"
         - url: "https://rubygems.org/rubygems/rubygems-{{ rubygems_version}}.tgz" 
           dest: "{{ src_folder }}" 
           chdir: "{{ src_folder }}/rubygems-{{ rubygems_version}}"
           cmd: "/usr/local/bin/ruby setup.rb"
         - url: "https://www.redmine.org/releases/redmine-{{ redmine_version }}.tar.gz"
-          dest: "{{ }}/home/redmine"
+          dest: "/home/{{ redmine_username }}"
           owner: "redmine"
 
   - name: Define variables for MariaDB
@@ -66,10 +58,10 @@
 
   - name: Redmine user
     user:
-      name: redmine
+      name: "{{ redmine_username }}"
 
   - name: Install MariaDB Roles
-    shell: 
+    include_role:
       name: "{{ rolevar }}"
     loop:
       - "{{ rolesPath }}/bertvv.mariadb"
@@ -80,10 +72,11 @@
     ansible.builtin.unarchive:
       src: "{{ item.url }}"
       dest: "{{ item.dest }}"
+      remote_src: yes
       owner: "{{ item.owner | default('root') }}"
     with_items: "{{ build_sources }}"
 
-  - name: Compile
+  - name: Compile and Setup 
     ansible.builtin.shell: 
       cmd: "{{ item.cmd }}"
       chdir: "{{ item.chdir }}"
@@ -92,14 +85,23 @@
     with_items: "{{ build_sources }}"
 
   - name: Install Ruby Gems
-    community.general.gem:
-      name: "{{ item.name }} "
-      build_flags: "{{ item.build_flags }}"
-      state: present
-    with_items: "{{ ruby_gems }}"
+    ansible.builtin.shell: "gem install {{ item }}"
+    with_items: 
+      - "bundler ruby-shadow" 
+      - "rails -V"
+      - "passenger -no-ri -no-rdoc"
+
+  - name: Template a file to Redmine Config
+    ansible.builtin.template:
+      src: "{{ item.src }}"
+      dest: "{{ item.dest }}"
+      owner: "{{ redmine_username | default('root') }}"
+    with_items: 
+      - { src: "{{ sdePath }}/templates/redmine.conf.j2", dest: "{{ redmine_home }}/config/configuration.yml", owner: "{{ redmine_username }}" }
+      - { src: "{{ sdePath }}/templates/redmine-database.conf.j2", dest: "{{ redmine_home }}/config/database.yml", owner: "{{ redmine_username }}" }
 
   - name: Install bundle
-    ansible.builtin.shell: 
+    ansible.builtin.shell:
       cmd: "{{ item }}"
       chdir: "{{ redmine_home }}"
     become_user: "{{ redmine_username }}"
@@ -113,13 +115,14 @@
     ansible.builtin.shell: 
       cmd: "passenger-install-nginx-module --auto"
 
-  - name: Template a file to Config/Nginx 
+  - name: Make Nginx Redmine Config folder 
+    shell: "mkdir -p {{ redmine_nginx_home }}/conf/host"
+
+  - name: Template a file to Nginx
     ansible.builtin.template:
       src: "{{ item.src }}"
       dest: "{{ item.dest }}"
     with_items: 
-      - { src: "{{ sdePath }}/templates/redmine.conf.j2", dest: "{{ redmine_home }}/config/configuration.yml", owner: "{{ redmine_username }}" }
-      - { src: "{{ sdePath }}/templates/redmine-database.conf.j2", dest: "{{ redmine_home }}/config/database.yml", owner: "{{ redmine_username }}" }
       - { src: "{{ sdePath }}/templates/redmine-nginx.conf.j2", dest: "{{ redmine_nginx_home }}/conf/host/redmine.conf", owner: "{{ redmine_username }}" }
       - { src: "{{ sdePath }}/templates/redmine-nginx-service.conf.j2", dest: "{{ redmine_nginx_service_path }}/ngninx.service", owner: "root" }
 

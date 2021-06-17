@@ -36,7 +36,7 @@
       when: server_name is match(".*sonarqube")
 
     - name: Install RedMine Server
-      include_tasks: redmine.yml
+      include_tasks: redmine4.yml
       when: server_name is match(".*redmine")
 
     - name: Install Nexus Server
