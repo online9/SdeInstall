@@ -1,0 +1,119 @@
+---
+  - name: Define variables for Redmine
+    set_fact:
+      redmine_version: 4.2.1
+      redmine_http_port: 80
+      redmine_username: redmine
+      redmine_password: redmine
+      redmine_database_name: redmine
+      remmine_database_host: localhost
+
+  - name: Define variables for Redmine
+    set_fact:
+      src_folder: "/usr/local/src" 
+      redmine_home: "/home/{{redmine_username}}/redmine-{{ redmine_version }}" 
+
+  - name: Define variables for Ruby
+    set_fact:
+      ruby_version: 2.7.3
+      rubygems_version: 3.1.4
+      ruby_gems: 
+        - { name: "bundler" } 
+        - { name: "ruby-shadow" } 
+        - { name: "rails", build_flags: "-V" } 
+        - { name: "passenger", build_flags: "-no-ri -no-rdoc" }
+
+  - name: Define variables for Build Sources
+    set_fact:
+      build_sources:
+        - url: "http://cache.ruby-lang.org/pub/ruby/{{ ruby_version.split('.')[0] }}.{{ ruby_version.split('.')[1] }}/ruby-{{ ruby_version }}.tar.gz"
+          dest: "{{ src_folder }}"
+          chdir: "ruby-{{ ruby_version }}"
+          cmd: "./configure --disable-install-doc; make && make install"
+        - url: "https://rubygems.org/rubygems/rubygems-{{ rubygems_version}}.tgz" 
+          dest: "{{ src_folder }}" 
+          chdir: "{{ src_folder }}/rubygems-{{ rubygems_version}}"
+          cmd: "/usr/local/bin/ruby setup.rb"
+        - url: "https://www.redmine.org/releases/redmine-{{ redmine_version }}.tar.gz"
+          dest: "{{ }}/home/redmine"
+          owner: "redmine"
+
+  - name: Define variables for MariaDB
+    set_fact:
+      mariadb_root_password: "password"
+      mariadb_databases:
+        - { name: "{{ redmine_database_name }}", encoding: utf8, collation: utf8_general_ci }
+      mariadb_users:
+        - { name: "{{ redmine_username }}", password: "{{ redmine_password }}", host: "%", priv: "{{ redmine_username }}.*:ALL" }
+
+  - name: Open Redmine Http port
+    include_tasks: "{{sdePath}}/open_firewall.yml"
+    vars:
+      work_name: "Redmine"
+      port_info:
+        - { protocol: "http", port: "service" }
+        - { protocol: "https", port: "service" }
+        - { protocol: "tcp", port: "{{ redmine_http_port }}" }
+
+  - name: Install package dependencies.
+    shell: "yum install -y {{ item }}"
+    with_items:
+      - "gcc g++ cpp gcc-c++"
+      - "openssl-devel readline-devel zlib-devel curl-devel libyaml-devel"
+      - "ImageMagick ImageMagick-devel"
+
+  - name: Redmine user
+    user:
+      name: redmine
+
+  - name: Install MariaDB Roles
+    shell: 
+      name: "{{ rolevar }}"
+    loop:
+      - "{{ rolesPath }}/bertvv.mariadb"
+    loop_control:
+      loop_var: rolevar
+
+  - name: Download Build Source
+    ansible.builtin.unarchive:
+      src: "{{ item.url }}"
+      dest: "{{ item.dest }}"
+      owner: "{{ item.owner | default('root') }}"
+    with_items: "{{ build_sources }}"
+
+  - name: Compile
+    ansible.builtin.shell: 
+      cmd: "{{ item.cmd }}"
+      chdir: "{{ item.chdir }}"
+    become_user: "{{ item.owner | default('root') }}"
+    when: item.cmd is defined
+    with_items: "{{ build_sources }}"
+
+  - name: Install Ruby Gems
+    community.general.gem:
+      name: "{{ item.name }} "
+      build_flags: "{{ item.build_flags }}"
+      state: present
+    with_items: "{{ ruby_gems }}"
+
+  - name: Install bundle
+    ansible.builtin.shell: 
+      cmd: "{{ item }}"
+      chdir: "{{ redmine_home }}"
+    become_user: "{{ redmine_username }}"
+    with_items: 
+      - "bundle install --without development test --path vendor/bundle"
+      - "bundle exec rake generate_secret_tokenRAILS_ENV=production"
+      - "bundle exec rake db:migrate"
+      - "bundle exec rake redmine:load_default_data RAILS_ENV=production REDMINE_LANG=ko"
+
+  - name: Install passenger nginx module
+    ansible.builtin.shell: 
+      cmd: "passenger-install-nginx-module --auto"
+
+
+
+  - name: Restart service Nginx, in all cases
+    ansible.builtin.service:
+      name: nginx
+      state: restarted

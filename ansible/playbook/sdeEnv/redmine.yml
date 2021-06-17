@@ -6,6 +6,11 @@
       ruby_install_bundler: true
       ruby_install_from_source: true
       ruby_rubygems_package_name: rubygems
+      ruby_install_gems: 
+        - bundler 
+        - chef 
+        - ruby-shadow
+        - rails
       ruby_download_url: http://cache.ruby-lang.org/pub/ruby/2.7/ruby-2.7.3.tar.gz
 
   - name: Define variables for MariaDB
@@ -30,7 +35,7 @@
       redmine_sql_password: redmine
       redmine_sql_database_name: redmine
       remmine_sql_database_host: localhost
-      redmine_version: 4.2.1
+#      redmine_version: 4.2.1
       redmine_nginx_bind_ip: "{{ ansible_host }}"
       redmine_configure_selinux: yes
        
@@ -43,22 +48,47 @@
         - { protocol: "https", port: "service" }
         - { protocol: "tcp", port: "{{ redmine_http_port }}" }
 
-  - name: Install package dependencies.
-    package:
-      name: "{{ item }}"
-      state: "present"
-    with_items:
-      - python3-pip
-      - libselinux-python
-      - policycoreutils-python
+#  - name: Install package dependencies.
+#    package:
+#      name: "{{ item }}"
+#      state: "present"
+#    with_items:
+#      - python3-pip
+#      - libselinux-python
+#      - policycoreutils-python
 
-  - name: Install Redmine Roles
+  - name: Redmine user
+    user:
+      name: redmine
+
+  - name: Install Ruby and MariaDB
     include_role: 
       name: "{{ rolevar }}"
     loop:
-      - "{{ rolesPath }}/geerlingguy.ruby"  
-#      - "{{ rolesPath }}/bngsudheer.centos_base"
+#      - "{{ rolesPath }}/geerlingguy.ruby"  
       - "{{ rolesPath }}/bertvv.mariadb"
-#      - "{{ rolesPath }}/bngsudheer.redmine"
     loop_control:
       loop_var: rolevar
+
+#  - name: Make redmine/bin folder for bundler
+#    file:
+#      path: "/home/redmine/bin"
+#      owner: redmine
+#      group: redmine
+#      state: directory
+#      recurse: yes
+#
+#  - name: Add Bundler symlinks.
+#    shell: "ln -s `which {{ item }}` /home/redmine/bin/{{ item }}"
+#    become_user: redmine
+#    with_items:
+#      - rake
+#      - bundler
+#
+#  - name: Install Redmine Roles
+#    include_role: 
+#      name: "{{ rolevar }}"
+#    loop:
+#      - "{{ rolesPath }}/bngsudheer.redmine"
+#    loop_control:
+#      loop_var: rolevar
