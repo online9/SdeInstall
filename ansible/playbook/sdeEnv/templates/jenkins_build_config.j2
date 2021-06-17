@@ -1,14 +1,14 @@
 <?xml version='1.1' encoding='UTF-8'?>
 <flow-definition plugin="workflow-job@2.40">
   <actions/>
-  <description>{{ JOB_TITLE }}</description>
+  <description>{{ item.title }}</description>
   <keepDependencies>false</keepDependencies>
   <properties>
     <hudson.security.AuthorizationMatrixProperty>
       <inheritanceStrategy class="org.jenkinsci.plugins.matrixauth.inheritance.InheritParentStrategy"/>
-      <permission>hudson.model.Item.Build:{{ DOMAIN_NAME }}</permission>
-      <permission>hudson.model.Item.Read:{{ DOMAIN_NAME }}</permission>
-      <permission>hudson.model.Item.Workspace:{{ DOMAIN_NAME }}</permission>
+      <permission>hudson.model.Item.Build:{{ site_id }}{{ item.domain_id }}</permission>
+      <permission>hudson.model.Item.Read:{{ site_id }}{{ item.domain_id }}</permission>
+      <permission>hudson.model.Item.Workspace:{{ site_id }}{{ item.domain_id }}</permission>
     </hudson.security.AuthorizationMatrixProperty>
     <org.jenkinsci.plugins.workflow.job.properties.DurabilityHintJobProperty>
       <hint>PERFORMANCE_OPTIMIZED</hint>
@@ -106,12 +106,10 @@
   </properties>
   <definition class="org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition" plugin="workflow-cps@2.87">
     <script>node {
-    def DOMAIN_NAME = &quot;{{ DOMAIN_NAME }}&quot;
-    def BIZ_KIND = &quot;{{ BIZ_KIND }}&quot;
-    def SVR_TYPE = &quot;{{ SVR_TYPE }}&quot;
-    def PROJ_NAME = &quot;{{ PROJ_NAME }}&quot;
-    def SVN_TARGET = &quot;{{ SVN_TARGET }}&quot;
-    def OP_MODE = &quot;{{ OP_MODE }}&quot;
+    def DOMAIN_ID = &quot;{{ item.domain_id }}&quot;
+    def SERVER_TYPE = &quot;{{ item.server_type }}&quot;
+    def PROJ_ID = &quot;{{ item.proj_id }}&quot;
+    def OP_MODE = &quot;{{ item.op_mode }}&quot;
 
     def POM = &quot;&quot;
     def MVN_OPT = &quot;&quot;
@@ -221,7 +219,7 @@
 
     stage(&apos;Restart Server&apos;) {
         if (env.RESTART_SERVER == &apos;YES&apos;) {
-            echo &quot;Restart {{ SERVER_NAME }} Server(${SVR_IP_01},${SVR_IP_01} - ${PROJ_KIND})&quot;
+            echo &quot;Restart {{ item.product_name }} Server(${SVR_IP_01},${SVR_IP_01} - ${PROJ_KIND})&quot;
             sh &quot;sshpass -p ${env.BASE_PW} ssh -p ${env.SSH_PORT} -o StrictHostKeyChecking=no ${SVR_TYPE}@${SVR_IP_01} &apos;${UTILS_PATH}/sdeCtl.sh start ${BIZ_KIND}&apos;&quot;
 
             if (RUN_MODE == &quot;p&quot;) {

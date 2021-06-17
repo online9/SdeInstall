@@ -1,0 +1,107 @@
+---
+  - name: Define Jenkins Plugins
+    set_fact:
+      jenkins_plugins:
+         - { name: "ace-editor",                         desc: "JavaScript GUI Lib: ACE Editor bundle plugin" }
+         - { name: "ansible",                            desc: "Ansible plugin" }
+         - { name: "ansicolor",                          desc: "AnsiColor" }
+         - { name: "ant",                                desc: "Ant Plugin" }
+         - { name: "antisamy-markup-formatter",          desc: "OWASP Markup Formatter Plugin" }
+         - { name: "apache-httpcomponents-client-4-api", desc: "Apache HttpComponents Client 4.x API Plugin" }
+         - { name: "blueocean-commons",                  desc: "Common API for Blue Ocean" }
+         - { name: "blueocean-core-js",                  desc: "Blue Ocean Core JS" }
+         - { name: "blueocean-dashboard",                desc: "Dashboard for Blue Ocean" }
+         - { name: "blueocean-git-pipeline",             desc: "Git Pipeline for Blue Ocean" }
+         - { name: "blueocean-github-pipeline",          desc: "GitHub Pipeline for Blue Ocean" }
+         - { name: "blueocean-jwt",                      desc: "JWT for Blue Ocean" }
+         - { name: "blueocean-pipeline-api-impl",        desc: "Pipeline implementation for Blue Ocean" }
+         - { name: "blueocean-pipeline-scm-api",         desc: "Pipeline SCM API for Blue Ocean" }
+         - { name: "blueocean-rest",                     desc: "REST API for Blue Ocean" }
+         - { name: "blueocean-rest-impl",                desc: "REST Implementation for Blue Ocean" }
+         - { name: "blueocean-web",                      desc: "Web for Blue Ocean" }
+         - { name: "bootstrap4-api",                     desc: "Bootstrap 4 API Plugin" }
+         - { name: "bootstrap5-api",                     desc: "Bootstrap 5 API Plugin" }
+         - { name: "bouncycastle-api",                   desc: "bouncycastle API Plugin" }
+         - { name: "branch-api",                         desc: "Branch API Plugin" }
+         - { name: "caffeine-api",                       desc: "Caffeine API Plugin" }
+         - { name: "checks-api",                         desc: "Checks API plugin" }
+         - { name: "cloudbees-folder",                   desc: "Folders Plugin" }
+         - { name: "command-launcher",                   desc: "Command Agent Launcher Plugin" }
+         - { name: "credentials",                        desc: "Credentials Plugin" }
+         - { name: "credentials-binding",                desc: "Credentials Binding Plugin" }
+         - { name: "display-url-api",                    desc: "Display URL API" }
+         - { name: "durable-task",                       desc: "Durable Task Plugin" }
+         - { name: "echarts-api",                        desc: "ECharts API Plugin" }
+         - { name: "favorite",                           desc: "Favorite" }
+         - { name: "font-awesome-api",                   desc: "Font Awesome API Plugin" }
+         - { name: "git",                                desc: "Git plugin" }
+         - { name: "git-client",                         desc: "Git client plugin" }
+         - { name: "git-server",                         desc: "GIT server Plugin" }
+         - { name: "github",                             desc: "GitHub plugin" }
+         - { name: "github-api",                         desc: "GitHub API Plugin" }
+         - { name: "github-branch-source",               desc: "GitHub Branch Source Plugin" }
+         - { name: "gradle",                             desc: "Gradle Plugin" }
+         - { name: "handlebars",                         desc: "JavaScript GUI Lib: Handlebars bundle plugin" }
+         - { name: "htmlpublisher",                      desc: "HTML Publisher plugin" }
+         - { name: "jackson2-api",                       desc: "Jackson 2 API Plugin" }
+         - { name: "jacoco",                             desc: "JaCoCo plugin" }
+         - { name: "javadoc",                            desc: "Javadoc Plugin" }
+         - { name: "jdk-tool",                           desc: "Oracle Java SE Development Kit Installer Plugin" }
+         - { name: "jenkins-design-language",            desc: "Design Language" }
+         - { name: "jjwt-api",                           desc: "Java JSON Web Token (JJWT) Plugin" }
+         - { name: "jquery3-api",                        desc: "JQuery3 API Plugin" }
+         - { name: "jsch",                               desc: "JSch dependency plugin" }
+         - { name: "junit",                              desc: "JUnit Plugin" }
+         - { name: "ldap",                               desc: "LDAP Plugin" }
+         - { name: "lockable-resources",                 desc: "Lockable Resources plugin" }
+         - { name: "mailer",                             desc: "Mailer Plugin" }
+         - { name: "mapdb-api",                          desc: "MapDB API Plugin" }
+         - { name: "matrix-auth",                        desc: "Matrix Authorization Strategy Plugin" }
+         - { name: "matrix-project",                     desc: "Matrix Project Plugin" }
+         - { name: "maven-plugin",                       desc: "Maven Integration plugin" }
+         - { name: "momentjs",                           desc: "JavaScript GUI Lib: Moment.js bundle plugin" }
+         - { name: "msbuild",                            desc: "MSBuild Plugin" }
+         - { name: "okhttp-api",                         desc: "OkHttp Plugin" }
+         - { name: "pipeline-build-step",                desc: "Pipeline: Build Step" }
+         - { name: "pipeline-graph-analysis",            desc: "Pipeline Graph Analysis Plugin" }
+         - { name: "pipeline-input-step",                desc: "Pipeline: Input Step" }
+         - { name: "pipeline-milestone-step",            desc: "Pipeline: Milestone Step" }
+         - { name: "pipeline-model-api",                 desc: "Pipeline: Model API" }
+         - { name: "pipeline-model-definition",          desc: "Pipeline: Declarative" }
+         - { name: "pipeline-model-extensions",          desc: "Pipeline: Declarative Extension Points API" }
+         - { name: "pipeline-rest-api",                  desc: "Pipeline: REST API Plugin" }
+         - { name: "pipeline-stage-step",                desc: "Pipeline: Stage Step" }
+         - { name: "pipeline-stage-tags-metadata",       desc: "Pipeline: Stage Tags Metadata" }
+         - { name: "pipeline-stage-view",                desc: "Pipeline: Stage View Plugin" }
+         - { name: "plain-credentials",                  desc: "Plain Credentials Plugin" }
+         - { name: "plugin-util-api",                    desc: "Plugin Utilities API Plugin" }
+         - { name: "popper-api",                         desc: "Popper.js API Plugin" }
+         - { name: "popper2-api",                        desc: "Popper.js 2 API Plugin" }
+         - { name: "powershell",                         desc: "PowerShell plugin" }
+         - { name: "publish-over",                       desc: "Infrastructure plugin for Publish Over X" }
+         - { name: "publish-over-ssh",                   desc: "Publish Over SSH" }
+         - { name: "pubsub-light",                       desc: "Pub-Sub 'light' Bus" }
+         - { name: "release",                            desc: "Release Plugin" }
+         - { name: "scm-api",                            desc: "SCM API Plugin" }
+         - { name: "script-security",                    desc: "Script Security Plugin" }
+         - { name: "snakeyaml-api",                      desc: "Snakeyaml API Plugin" }
+         - { name: "ssh-credentials",                    desc: "SSH Credentials Plugin" }
+         - { name: "sshd",                               desc: "SSH server" }
+         - { name: "structs",                            desc: "Structs Plugin" }
+         - { name: "subversion",                         desc: "Subversion Plug-in" }
+         - { name: "timestamper",                        desc: "Timestamper" }
+         - { name: "token-macro",                        desc: "Token Macro Plugin" }
+         - { name: "trilead-api",                        desc: "Trilead API Plugin" }
+         - { name: "uno-choice",                         desc: "Active Choices Plug-in" }
+         - { name: "variant",                            desc: "Variant Plugin" }
+         - { name: "workflow-aggregator",                desc: "Pipeline" }
+         - { name: "workflow-api",                       desc: "Pipeline: API" }
+         - { name: "workflow-basic-steps",               desc: "Pipeline: Basic Steps" }
+         - { name: "workflow-cps",                       desc: "Pipeline: Groovy" }
+         - { name: "workflow-cps-global-lib",            desc: "Pipeline: Shared Groovy Libraries" }
+         - { name: "workflow-durable-task-step",         desc: "Pipeline: Nodes and Processes" }
+         - { name: "workflow-job",                       desc: "Pipeline: Job" }
+         - { name: "workflow-multibranch",               desc: "Pipeline: Multibranch" }
+         - { name: "workflow-scm-step",                  desc: "Pipeline: SCM Step" }
+         - { name: "workflow-step-api",                  desc: "Pipeline: Step API" }
+         - { name: "workflow-support",                   desc: "Pipeline: Supporting APIs" }

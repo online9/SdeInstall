@@ -1,16 +1,65 @@
 ---
   - set_fact:
+      site_id: "nxf"
+      jenkins_work_home: "/sde/build"
+      jenkins_connection_delay: 5
+      jenkins_connection_retries: 60
+      jenkins_cli: "java -jar {{ jenkins_home }}/jenkins-cli.jar -s http://localhost:{{ jenkins_http_port }}/ -webSocket -auth {{ jenkins_admin_username }}:{{ jenkins_admin_password }}"
+      jenkins_nodes:
+        - { type: "build",     node_id: "Nxf", name: "Dashboard View", server: "was" }
+        - { type: "packaging", node_id: "Nxf", name: "Dashboard View", server: "wildfly" }
       jenkins_jobs: 
-        - job_id: "Nxf"
-          job_type: "Build"
-          name: "Dashboard View"
-          
+        - { type: "build",     job_id: "Nxf", domain_id: "sso", proj_id: "auth", title: "Build Test", server_type: "was", product_name: "wildfly", op_mode: "prod" }
+#        - { type: "packaging", job_id: "Nxf", title: "Dashboard View", server: "wildfly" }
+#        - { type: "deploy",    job_id: "Nxf", title: "Dashboard View", server: "wildfly" }
+#        - { type: "release",   job_id: "Nxf", title: "Dashboard View", server: "wildfly" }
+#        - { type: "control",   job_id: "Nxf", title: "Dashboard View", server: "wildfly" }
 
-  - name: Upload Jenkins Jobs by jenkins-cli.jar
+  - name: Make Jenkins Directories
+    file:
+      path: "{{ jenkins_work_home }}/{{ item }}"
+      state: directory
+      recurse: yes
+      owner: jenkins
+      group: jenkins
+    with_items:
+      - bin
+      - config
+      - templates
+      - utils
+
+  - name: Download jenkins-cli.jar
     get_url:
       url: "http://localhost:{{ jenkins_http_port }}/jnlpJars/jenkins-cli.jar"
       dest: "{{ jenkins_home }}"
       owner: jenkins
       group: jenkins
-          
-               java -jar {{ jenkins_home }}/jenkins-cli.jar -s http://localhost:8070/ -webSocket create-job 
+      
+  - name: "Template a file to {{ jenkins_home }}/templates/<job_id>_<type>.xml"
+    ansible.builtin.template:
+      src: "{{ sdePath }}/templates/jenkins_{{ item.type }}_config.j2"
+      dest: "{{ jenkins_work_home }}/templates/{{ item.job_id }}_{{ item.type }}.xml"
+    with_items: "{{ jenkins_jobs }}"
+
+  - name: Restart Jenkins by jenkins-cli.jar
+    shell: "{{ jenkins_cli}} restart"
+
+  - name: Wait for Jenkins to start up before proceeding.
+    uri:
+      url: "http://localhost:{{ jenkins_http_port }}/cli/"
+      method: GET
+      return_content: "yes"
+      timeout: 5
+      body_format: raw
+      follow_redirects: "no"
+      status_code: 200,403
+    register: result
+    until: (result.status == 403 or result.status == 200) and (result.content.find("Please wait while") == -1)
+    retries: "{{ jenkins_connection_retries }}"
+    delay: "{{ jenkins_connection_delay }}"
+    changed_when: false
+    check_mode: false
+
+  - name: Upload Jenkins Jobs by jenkins-cli.jar
+    shell: "{{ jenkins_cli}} create-job {{ item.job_id}} < {{ jenkins_work_home }}/templates/{{ item.job_id }}_{{ item.type }}.xml"
+    with_items: "{{ jenkins_jobs }}"

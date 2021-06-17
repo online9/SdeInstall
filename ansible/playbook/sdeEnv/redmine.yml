@@ -48,6 +48,7 @@
       name: "{{ item }}"
       state: "present"
     with_items:
+      - python3-pip
       - libselinux-python
       - policycoreutils-python
 
@@ -58,6 +59,6 @@
       - "{{ rolesPath }}/geerlingguy.ruby"  
 #      - "{{ rolesPath }}/bngsudheer.centos_base"
       - "{{ rolesPath }}/bertvv.mariadb"
-      - "{{ rolesPath }}/bngsudheer.redmine"
+#      - "{{ rolesPath }}/bngsudheer.redmine"
     loop_control:
       loop_var: rolevar
