@@ -13,8 +13,9 @@
   - name: Define variables for Redmine
     set_fact:
       src_folder: "/usr/local/src"
-      redmine_home: "/home/{{redmine_username}}/redmine-{{ redmine_version }}" 
-      redmine_nginx_home: "/opt/ngnix" 
+      bundle_path: "/usr/local/bin"
+      redmine_home: "/home/{{ redmine_username }}/redmine-{{ redmine_version }}" 
+      redmine_nginx_home: "/opt/nginx" 
       redmine_nginx_service_path: "/usr/lib/systemd/system" 
 
   - name: Define variables for Build Sources
@@ -30,15 +31,17 @@
           cmd: "/usr/local/bin/ruby setup.rb"
         - url: "https://www.redmine.org/releases/redmine-{{ redmine_version }}.tar.gz"
           dest: "/home/{{ redmine_username }}"
-          owner: "redmine"
+          owner: "{{ redmine_username }}"
+          group: "{{ redmine_username }}"
 
   - name: Define variables for MariaDB
     set_fact:
       mariadb_root_password: "password"
       mariadb_databases:
-        - { name: "{{ redmine_database_name }}", encoding: utf8, collation: utf8_general_ci }
+        - { name: "{{ redmine_database_name }}", encoding: "utf8", collation: "utf8_general_ci" }
       mariadb_users:
-        - { name: "{{ redmine_username }}", password: "{{ redmine_password }}", host: "%", priv: "{{ redmine_username }}.*:ALL" }
+        - { name: "{{ redmine_username }}", password: "{{ redmine_password }}", host: "%", priv: "*.*:ALL" }
+      ansible_python_interpreter: "{{ ansible_facts.python.executable }}"
 
   - name: Open Redmine Http port
     include_tasks: "{{sdePath}}/open_firewall.yml"
@@ -52,21 +55,34 @@
   - name: Install package dependencies.
     shell: "yum install -y {{ item }}"
     with_items:
+      - "mariadb-server mariadb mariadb-devel MySQL-python"
       - "gcc g++ cpp gcc-c++"
-      - "openssl-devel readline-devel zlib-devel curl-devel libyaml-devel"
+      - "ibxslt-devel libyaml-devel libxml2-devel gdbm-devel libffi-devel zlib-devel"
+      - "openssl-devel readline-devel curl-devel pcre-devel memcached-devel valgrind-devel"
       - "ImageMagick ImageMagick-devel"
+
+  - name: Restart service MariaDB, in all cases
+    ansible.builtin.service:
+      name: mariadb
+      state: restarted
+
+  - name: Create a new database with name '{{ redmine_database_name }}'
+    community.mysql.mysql_db:
+      name: "{{ item.name }}"
+      encoding: "{{ item.encoding }}"
+      collation: "{{ item.collation }}"
+    with_items: "{{ mariadb_databases }}"
+
+  - name: Create database user using password with all database privileges
+    community.mysql.mysql_user:
+      name: "{{ item.name }}"
+      password: "{{ item.password }}"
+      priv: "{{ item.priv }}"
+    with_items: "{{ mariadb_users }}"
 
   - name: Redmine user
     user:
       name: "{{ redmine_username }}"
-
-  - name: Install MariaDB Roles
-    include_role:
-      name: "{{ rolevar }}"
-    loop:
-      - "{{ rolesPath }}/bertvv.mariadb"
-    loop_control:
-      loop_var: rolevar
 
   - name: Download Build Source
     ansible.builtin.unarchive:
@@ -74,6 +90,7 @@
       dest: "{{ item.dest }}"
       remote_src: yes
       owner: "{{ item.owner | default('root') }}"
+      group: "{{ item.group | default('root') }}"
     with_items: "{{ build_sources }}"
 
   - name: Compile and Setup 
@@ -89,31 +106,31 @@
     with_items: 
       - "bundler ruby-shadow" 
       - "rails -V"
-      - "passenger -no-ri -no-rdoc"
 
   - name: Template a file to Redmine Config
     ansible.builtin.template:
       src: "{{ item.src }}"
       dest: "{{ item.dest }}"
-      owner: "{{ redmine_username | default('root') }}"
+      owner: "{{ item.owner | default('root') }}"
+      group: "{{ item.owner | default('root') }}"
     with_items: 
       - { src: "{{ sdePath }}/templates/redmine.conf.j2", dest: "{{ redmine_home }}/config/configuration.yml", owner: "{{ redmine_username }}" }
       - { src: "{{ sdePath }}/templates/redmine-database.conf.j2", dest: "{{ redmine_home }}/config/database.yml", owner: "{{ redmine_username }}" }
 
   - name: Install bundle
-    ansible.builtin.shell:
-      cmd: "{{ item }}"
-      chdir: "{{ redmine_home }}"
+    ansible.builtin.shell: "cd {{ redmine_home }}; {{ item }}"
+    become: true
     become_user: "{{ redmine_username }}"
     with_items: 
-      - "bundle install --without development test --path vendor/bundle"
-      - "bundle exec rake generate_secret_token"
-      - "RAILS_ENV=production bundle exec rake db:migrate"
-      - "bundle exec rake redmine:load_default_data RAILS_ENV=production REDMINE_LANG=ko"
+      - "{{ bundle_path }}/bundle install --without development test --path vendor/bundle"
+      - "{{ bundle_path }}/bundle exec {{ bundle_path }}/rake generate_secret_token"
+      - "RAILS_ENV=production {{ bundle_path }}/bundle exec {{ bundle_path }}/rake db:migrate"
+      - "{{ bundle_path }}/bundle exec {{ bundle_path }}/rake redmine:load_default_data RAILS_ENV=production REDMINE_LANG=ko"
 
   - name: Install passenger nginx module
-    ansible.builtin.shell: 
-      cmd: "passenger-install-nginx-module --auto"
+    ansible.builtin.shell: |
+      gem install passenger
+      passenger-install-nginx-module --auto
 
   - name: Make Nginx Redmine Config folder 
     shell: "mkdir -p {{ redmine_nginx_home }}/conf/host"
@@ -122,9 +139,11 @@
     ansible.builtin.template:
       src: "{{ item.src }}"
       dest: "{{ item.dest }}"
+      owner: "{{ item.owner | default('root') }}"
+      group: "{{ item.owner | default('root') }}"
     with_items: 
-      - { src: "{{ sdePath }}/templates/redmine-nginx.conf.j2", dest: "{{ redmine_nginx_home }}/conf/host/redmine.conf", owner: "{{ redmine_username }}" }
-      - { src: "{{ sdePath }}/templates/redmine-nginx-service.conf.j2", dest: "{{ redmine_nginx_service_path }}/ngninx.service", owner: "root" }
+      - { src: "{{ sdePath }}/templates/redmine-nginx.conf.j2", dest: "{{ redmine_nginx_home }}/conf/host/redmine.conf", owner: "root" }
+      - { src: "{{ sdePath }}/templates/redmine-nginx-service.conf.j2", dest: "{{ redmine_nginx_service_path }}/nginx.service", owner: "root" }
 
   - name: Template a file to Config/Nginx 
     shell: |
