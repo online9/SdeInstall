@@ -2,8 +2,8 @@ server {
     listen       80;
     server_name  localhost;
 
-    location / {
-        root {{ redmine_home }};
+    location /redmine {
+        root {{ redmine_home }}/public;
         passenger_enabled on;
     }
 

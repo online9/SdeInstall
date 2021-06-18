@@ -13,7 +13,7 @@
   - name: Define variables for Redmine
     set_fact:
       src_folder: "/usr/local/src"
-      bundle_path: "/usr/local/bin"
+      local_bin_path: "/usr/local/bin"
       redmine_home: "/home/{{ redmine_username }}/redmine-{{ redmine_version }}" 
       redmine_nginx_home: "/opt/nginx" 
       redmine_nginx_service_path: "/usr/lib/systemd/system" 
@@ -60,11 +60,13 @@
       - "ibxslt-devel libyaml-devel libxml2-devel gdbm-devel libffi-devel zlib-devel"
       - "openssl-devel readline-devel curl-devel pcre-devel memcached-devel valgrind-devel"
       - "ImageMagick ImageMagick-devel"
+      - "httpd libcurl-devel httpd-devel apr-devel apr-util-devel"
 
   - name: Restart service MariaDB, in all cases
     ansible.builtin.service:
       name: mariadb
       state: restarted
+      enabled: yes
 
   - name: Create a new database with name '{{ redmine_database_name }}'
     community.mysql.mysql_db:
@@ -122,35 +124,30 @@
     become: true
     become_user: "{{ redmine_username }}"
     with_items: 
-      - "{{ bundle_path }}/bundle install --without development test --path vendor/bundle"
-      - "{{ bundle_path }}/bundle exec {{ bundle_path }}/rake generate_secret_token"
-      - "RAILS_ENV=production {{ bundle_path }}/bundle exec {{ bundle_path }}/rake db:migrate"
-      - "{{ bundle_path }}/bundle exec {{ bundle_path }}/rake redmine:load_default_data RAILS_ENV=production REDMINE_LANG=ko"
+      - "{{ local_bin_path }}/bundle install --without development test --path vendor/bundle"
+      - "{{ local_bin_path }}/bundle exec {{ local_bin_path }}/rake generate_secret_token"
+      - "RAILS_ENV=production {{ local_bin_path }}/bundle exec {{ local_bin_path }}/rake db:migrate"
+      - "{{ local_bin_path }}/bundle exec {{ local_bin_path }}/rake redmine:load_default_data RAILS_ENV=production REDMINE_LANG=ko"
 
   - name: Install passenger nginx module
     ansible.builtin.shell: |
       gem install passenger
-      passenger-install-nginx-module --auto
+      passenger-install-apache2-module --auto
 
   - name: Make Nginx Redmine Config folder 
     shell: "mkdir -p {{ redmine_nginx_home }}/conf/host"
 
-  - name: Template a file to Nginx
+  - name: Template a file to Httpd
     ansible.builtin.template:
       src: "{{ item.src }}"
       dest: "{{ item.dest }}"
       owner: "{{ item.owner | default('root') }}"
       group: "{{ item.owner | default('root') }}"
     with_items: 
-      - { src: "{{ sdePath }}/templates/redmine-nginx.conf.j2", dest: "{{ redmine_nginx_home }}/conf/host/redmine.conf", owner: "root" }
-      - { src: "{{ sdePath }}/templates/redmine-nginx-service.conf.j2", dest: "{{ redmine_nginx_service_path }}/nginx.service", owner: "root" }
+      - { src: "{{ sdePath }}/templates/redmine-httpd-vhost.conf.j2", dest: "/etc/httpd/conf.d/vhost.conf", owner: "root" }
 
-  - name: Template a file to Config/Nginx 
-    shell: |
-      sed -i "/#gzip/a\/include host\/*.conf;" {{ redmine_nginx_home }}/conf/nginx.conf
-      sed -i "/charset/c\charset utf-8;" {{ redmine_nginx_home }}/conf/nginx.conf
-
-  - name: Restart service Nginx, in all cases
+  - name: Restart service Apache Httpd, in all cases
     ansible.builtin.service:
-      name: nginx
+      name: httpd
       state: restarted
+      enabled: yes
