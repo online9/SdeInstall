@@ -17,6 +17,7 @@
       redmine_home: "/home/{{ redmine_username }}/redmine-{{ redmine_version }}" 
       redmine_nginx_home: "/opt/nginx" 
       redmine_nginx_service_path: "/usr/lib/systemd/system" 
+      gem_path: ""
 
   - name: Define variables for Build Sources
     set_fact:
