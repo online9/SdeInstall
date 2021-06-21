@@ -148,8 +148,8 @@
     set_fact:
       passenger_version: "{{ reg_passenger_version.stdout }}"
 
-  - name: Make Nginx Redmine Config folder 
-    shell: "mkdir -p {{ redmine_nginx_home }}/conf/host"
+  - name: Change Folder mode for httpd process owner 
+    shell: "chmod 755 /home/{{ redmine_username }}"
 
   - name: Template a file to Httpd
     ansible.builtin.template:
