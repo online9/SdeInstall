@@ -522,6 +522,10 @@ If ($isProceed.ToLower() -eq "yes") {
     Start-Sleep -s 10
     ping ${baseVmIp}
 
+    If (Test-Path ~/.ssh/known_hosts) {
+        Echo "" > ~/.ssh/known_hosts
+    }
+
     Write-Host -ForegroundColor Green "Remove host key from ~/.ssh/known_hosts"
     Get-Content -Path ~/.ssh/known_hosts | Where-Object {$_ -notmatch "${baseVmIp}"} | Set-Content -Path ~/.ssh/known_hosts_new
     cp ~/.ssh/known_hosts_new ~/.ssh/known_hosts
@@ -558,7 +562,9 @@ For ($i = 1; $i -le $targetIp.count; $i++) {
 
     Try {
         Write-Host -ForegroundColor Green "${vmName} Vm creation Option."
-        Write-Host -ForegroundColor Green "  =>  memorySize : ${memorySize}, Path ${targetVmPath}, NewVHDPath :${vmDiskName}"
+        Write-Host -ForegroundColor Green "  => memorySize : ${memorySize}"
+        Write-Host -ForegroundColor Green "  => Path       : ${targetVmPath}"
+        Write-Host -ForegroundColor Green "  => NewVHDPath : ${vmDiskName}"
 
         If ($vmGeneration -eq 2) {
             New-VM -Name ${vmName} -MemoryStartupBytes ${memorySize} -BootDevice VHD -NewVHDPath "${vmDiskName}" -Path ${targetVmPath} -NewVHDSizeBytes 8GB -Generation 2 -Switch ${switchName}
@@ -582,7 +588,7 @@ For ($i = 1; $i -le $targetIp.count; $i++) {
             Write-Host -ForegroundColor Green "${vmName} Vm is set to use dynamic memory allocation."
             Write-Host -ForegroundColor Green "  => StartupBytes : ${dynamicStartupBytes}MB"
             Write-Host -ForegroundColor Green "  => MinimumBytes : ${dynamicMinimumBytes}MB"
-            Write-Host -ForegroundColor Green "  => MaximumBytes : ${dynamicMaximumBytes}MB). "
+            Write-Host -ForegroundColor Green "  => MaximumBytes : ${dynamicMaximumBytes}MB. "
         }
 
         Write-Host -ForegroundColor Green "${vmName} Vm is created."
@@ -594,7 +600,8 @@ For ($i = 1; $i -le $targetIp.count; $i++) {
         }
 
         Copy-Item -Path ${baseVhdxName} -Destination "${vmDiskName}"
-        Write-Host -ForegroundColor Green "Copy ${baseVhdxName} => ${vmDiskName}"
+        Write-Host -ForegroundColor Green "Copy ${baseVhdxName}"
+        Write-Host -ForegroundColor Green "  => ${vmDiskName}"
         Write-Host -ForegroundColor Green "${vmName} VM is created."
         Write-Host " "
     } Catch {
