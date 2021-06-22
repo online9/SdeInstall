@@ -1,6 +1,6 @@
 param ($serverIp, $user="root", $basePath="/sde", $baseDrive="C:",
-       $options="", $passwordless="", $nfsServerInfo="", $verbose="",
-       $skipAll="no", $skipAnsible="no", $skipAnsibleFiles="no", $skipAnsibleRoles="no", $mountSdeFolder="no")
+       $options="", $passwordless="",  $verbose="",
+       $skipAll="no", $skipAnsible="no", $skipAnsibleFiles="no", $skipAnsibleRoles="no")
 
 $cloudPath = "${basePath}/cloud"
 $ansiblePath = "${cloudPath}/ansible"
@@ -16,10 +16,10 @@ Function Read-HostDefault($prompt, $default) {
 
 Function Show-Help() {
     Write-Host 'NAME'
-    Write-Host '    Install SdeEnv'
+    Write-Host '    Install Telegraf'
     Write-Host ''
     Write-Host 'SYNOPSIS'
-    Write-Host '    Install Support Development Environment(SDE)'
+    Write-Host '    Install Monitoring Support Development Environment(SDE)'
     Write-Host ''
     Write-Host 'SYNTAX'
     Write-Host '    installSdeEnv.ps1 -serverIp <AnsibleServerIp> [-user <User> -baseDrive <DriveLetter> -basePath <BasePath> -options <AnsiblePlaybook Extra Options>'
@@ -28,12 +28,8 @@ Function Show-Help() {
     Write-Host '      -options --key1=value1,--key2=value2'
     Write-Host ''
     Write-Host 'DESCRIPTION'
-    Write-Host '    This is a PowerShell script that installs the SDE Support Server needed for Development project.'
-    Write-Host '    Install Ansible, SCM(svn/git/gitlab), CI/CD(Jenkins), Static Analysis(SonarQube based on PostgreSQL),'
-    Write-Host '    Repository(Maven,Nuget,npm,rpm...), and InfluxDB/Grafana Monitoring Servers'
-    Write-Host '      1. Install Ansible Server first.'
-    Write-Host '      2. Donwloads ansible roles via Ansible Galaxy'
-    Write-Host '      3. Install SDE servers using ansible playbook SdeEnv.yml file'
+    Write-Host '    This is a PowerShell script that installs the Telegraf Agent.'
+    Write-Host '      1. Install Telegraf agent using ansible playbook InstallTelegraf.yml file'
     Write-Host '         - In the /sde/cloud/ansible/hosts/sde-support.inv file, describe the target server IP and server type and install it.'
     Write-Host '         - Examples /sde/cloud/ansible/hosts/sde-support.inv'
     Write-Host '           #------------------------------------------------------------------------------------------------'
@@ -57,24 +53,21 @@ Function Show-Help() {
     Write-Host '           #------------------------------------------------------------------------------------------------'
     Write-Host ''
     Write-Host 'Examples'
-    Write-Host '    installSdeEnv.ps1 -help'
-    Write-Host '    installSdeEnv.ps1 -serverIp 172.18.0.1 -passwordless yes'
-    Write-Host '    installSdeEnv.ps1 -serverIp 172.18.0.1 -user root -passwordless yes -skipAnsibleRoles yes -mountSdeFolder yes'
-    Write-Host '    installSdeEnv.ps1 -serverIp 172.18.0.1 -user root -baseDrive C: -skipAnsible yes -skipAnsibleFiles yes'
-    Write-Host '    installSdeEnv.ps1 -serverIp 172.18.0.1 -user root -baseDrive C: -basePath /sde -passwordless yes'
-    Write-Host '    installSdeEnv.ps1 -serverIp 172.18.0.1 -user root -baseDrive C: -basePath /sde -options "-inv=sde-support.inv -playbook=sdeEnv/main.yml -extra=targetServers=all:ansiblePath=/sde/cloud/ansible"'
+    Write-Host '    installTelegraf.ps1 -help'
+    Write-Host '    installTelegraf.ps1 -serverIp 172.18.0.1 -passwordless yes'
+    Write-Host '    installTelegraf.ps1 -serverIp 172.18.0.1 -user root -passwordless yes -baseDrive C: -basePath /sde'
+    Write-Host '    installTelegraf.ps1 -serverIp 172.18.0.1 -user root "-inv=sde-support.inv -playbook=sdeEnv/installTelegraf.yml -extra=targetServers=all:ansiblePath=/sde/cloud/ansible"'
     Write-Host ''
 }
 
 Function Show-Config() {
-    Write-Host -ForegroundColor Yellow "SDE install script configuration"
+    Write-Host -ForegroundColor Yellow "Telegraf install script configuration"
     Write-Host -ForegroundColor Yellow "======================================================================="
     Write-Host -ForegroundColor Yellow "Operation User                        : ${user}"
     Write-Host -ForegroundColor Yellow "Ansible Server Ip                     : ${serverIp}"
     Write-Host -ForegroundColor Yellow "-----------------------------------------------------------------------"
     Write-Host -ForegroundColor Yellow "Local Base Drive                      : ${baseDrive}"
     Write-Host -ForegroundColor Yellow "Local Base Path                       : ${basePath}"
-    Write-Host -ForegroundColor Yellow "Local Hyper-V PowerShell Script Path  : ${hypervPowerShellPath}"
     Write-Host -ForegroundColor Yellow "Local Shell Path                      : ${localShellPath}"
     Write-Host -ForegroundColor Yellow "-----------------------------------------------------------------------"
     Write-Host -ForegroundColor Yellow "Remote Ansible Folder                 : ${ansiblePath}"
@@ -122,7 +115,7 @@ Function Copy-SshKey($user, $serverIp) {
 }
 
 Function Copy-AnsibleAndShellFiles() {
-    $targetPathList = "/etc/ansible", "${ansiblePath}/config", "${ansiblePath}/hosts", "${ansiblePath}/playbook/sdeEnv", "${ansiblePath}/roles"
+    $targetPathList = "/etc/ansible", "${ansiblePath}/config", "${ansiblePath}/hosts", "${ansiblePath}/playbook/sdeEnv", "${ansiblePath}/roles", "${ansiblePath}/roles/dj-wasabi.telegraf"
 
     Write-Host ""
     Write-Host -ForegroundColor Green "Make SDE Env folder for Ansible Server(${serverIp})"
@@ -140,7 +133,7 @@ Function Copy-AnsibleAndShellFiles() {
     Write-Host -ForegroundColor Green "Copy SDE Env files for Ansible Server(${serverIp})"
     Write-Host -ForegroundColor Green "==================================================================================="
 
-    $targetFileList = "\config\ansible.cfg", "\config\dockpack.base_utils-main.yml", "\hosts\sde-support.inv"
+    $targetFileList = "\config\ansible.cfg", "\hosts\sde-support.inv"
 
     For ($i = 1; $i -LE $targetFileList.count; $i++) {
         $shellPathAndFile = ${baseDrive} + ${ansiblePath} + ${targetFileList}[$i - 1]
@@ -164,8 +157,8 @@ Function Copy-AnsibleAndShellFiles() {
     Write-Host -ForegroundColor Green "Copy SDE folders for Ansible Server(${serverIp})"
     Write-Host -ForegroundColor Green "==================================================================================="
 
-    $sourceFolderList = @("${ansiblePath}/config", "${ansiblePath}/playbook/sdeEnv")
-    $targetFolderList = @("${ansiblePath}/config", "${ansiblePath}/playbook/sdeEnv")
+    $sourceFolderList = @("${ansiblePath}/config", "${ansiblePath}/playbook/sdeEnv", "${ansiblePath}/roles/dj-wasabi.telegraf")
+    $targetFolderList = @("${ansiblePath}/config", "${ansiblePath}/playbook/sdeEnv", "${ansiblePath}/roles/dj-wasabi.telegraf")
 
     For ($i = 1; $i -LE $targetFolderList.count; $i++) {
         $localFolder = ${sourceFolderList}[$i - 1]
@@ -186,11 +179,7 @@ If (($serverIp -EQ $Null -AND -$Args.Count -EQ 0) -OR ($Args[0] -MATCH "-h" -OR 
 }
 
 If ($options -EQ "") {
-    $options = "--inventory=sde-support.inv,--playbook=sdeEnv/main.yml,--options=targetServers=all:ansiblePath=/sde/cloud/ansible"
-}
-
-If ($nfsServerInfo -EQ "") {
-    $nfsServerInfo = "172.17.0.2:/cloud"
+    $options = "--inventory=sde-support.inv,--playbook=sdeEnv/installTelegraf.yml,--options=targetServers=all:ansiblePath=/sde/cloud/ansible"
 }
 
 If ($serverIp -EQ $Null) {
@@ -227,35 +216,17 @@ If ($skipAnsibleFiles.toLOwer() -EQ "yes") {
     $baseCommand = $baseCommand + "-copyShell no"
 }
 
-If ($skipAnsible.toLOwer() -EQ "no") {
-    $sshShellCommand = $baseCommand + "-shell ${shellPath}/installAnsible.sh -options --by-pip"
-    Write-Message "Depending on your internet connection, it may take 3 ~ 5 minutes to install the Ansible Server.`nExecute Cmd`n   ${sshShellCommand}"
-    Invoke-Expression "${sshShellCommand}"
-}
-
-If ($mountSdeFolder.toLOwer() -EQ "yes") {
-    $sshShellCommand = $baseCommand + "-shell ${shellPath}/mountFolder.sh -options $nfsServerInfo,$cloudPath"
-    Write-Message "Mount SDE Folder from NFS Share folder.`nExecute Cmd`n   ${sshShellCommand}"
-    Invoke-Expression "${sshShellCommand}"
-}
-
-If ($skipAnsibleRoles.toLOwer() -EQ "no") {
-    $sshShellCommand = $baseCommand + "-shell ${shellPath}/installUsefulAnsibleRoles.sh"
-    Write-Message "Depending on your internet connection, it may take 5 ~ 10 minutes to download Ansible Roles from Ansible Galaxy.`nExecute Cmd`n   ${sshShellCommand}"
-    Invoke-Expression "${sshShellCommand}"
-}
-
 $sshShellCommand = $baseCommand + "-shell ${shellPath}/runAnsiblePlaybook.sh -options $options"
 
 If ($verbose -NE "") {
     $sshShellCommand = $sshShellCommand + " -verbose ${verbose}"
 }
 
-Write-Message "It may take 5 ~ 20 minutes to install SDE Servers using sdeEnv/main.yml ansible playbook file.`nExecute Cmd`n   ${sshShellCommand}"
+Write-Message "It may take 5 ~ 20 minutes to install Telegraf Monitoring Agent using sdeEnv/installTelegraf.yml ansible playbook file.`nExecute Cmd`n   ${sshShellCommand}"
 Invoke-Expression "${sshShellCommand}"
 
 $elapsedTime = $(get-date) - $StartTime
 Write-Host ''
 Write-Host -ForegroundColor Green '-----------------------------------------------------------------------------------'
-Write-Host -ForegroundColor Green "${hypervPowerShellPath}\InstallSdeEnv.ps1 ElapsedTime : ${elapsedTime}"
+Write-Host -ForegroundColor Green "${hypervPowerShellPath}\InstallTelegraf.ps1 ElapsedTime : ${elapsedTime}"
 Write-Host -ForegroundColor Green '-----------------------------------------------------------------------------------'

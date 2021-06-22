@@ -1,0 +1,61 @@
+---
+  - name: Define Scouter Variables
+    set_fact:
+      scouter_udp_port: 6100
+      scouter_tcp_port: 6100
+      scouter_version: 2.10.2
+      monitoring_path: "/sde/mon"
+
+  - name: Define variables for Build Sources
+    set_fact:
+      scouter_server_path: "{{ monitoring_path }}/scouter/server"
+      binary_sources:
+        - url:  "https://github.com/scouter-project/scouter/releases/download/v{{ scouter_version }}/scouter-all-{{ scouter_version }}.tar.gz"
+          dest: "{{ monitoring_path }}"
+
+  - name: Make Scouter folder
+    file:
+      path: "{{ monitoring_path }}"
+      state: directory
+      recurse: yes
+
+  - name: Open Scouter port
+    include_tasks: "{{sdePath}}/open_firewall.yml"
+    vars:
+      work_name: "Scouter"
+      port_info: 
+        - { protocol: "udp", port: "{{ scouter_udp_port }}" }
+        - { protocol: "tcp", port: "{{ scouter_tcp_port }}" }
+
+  - name: Download Binary
+    ansible.builtin.unarchive:
+      src: "{{ item.url }}"
+      dest: "{{ item.dest }}"
+      remote_src: yes
+      owner: "{{ item.owner | default('root') }}"
+      group: "{{ item.group | default('root') }}"
+    with_items: "{{ binary_sources }}"
+
+  - name: Install Java Roles
+    include_role:
+      name: "{{ rolevar }}"
+    loop:
+      - "{{ rolesPath }}/geerlingguy.java"
+    loop_control:
+      loop_var: rolevar
+
+  - name: Template a file to Scouter Config
+    ansible.builtin.template:
+      src: "{{ item.src }}"
+      dest: "{{ item.dest }}"
+      owner: "{{ item.owner | default('root') }}"
+      group: "{{ item.owner | default('root') }}"
+    with_items: 
+      - { src: "{{ sdePath }}/templates/scouter-service.conf.j2", dest: "/etc/systemd/system/scouter.service" }
+
+  - name: Restart service Scouter Server, in all cases
+    ansible.builtin.service:
+      name: scouter
+      state: restarted
+      enabled: yes
+

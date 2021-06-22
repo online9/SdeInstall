@@ -1,0 +1,11 @@
+[Unit]
+Description=Start Scouter service
+
+[Service]
+WorkingDirectory={{ scouter_server_path }}
+Type=oneshot
+ExecStart=/bin/sh startup.sh
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

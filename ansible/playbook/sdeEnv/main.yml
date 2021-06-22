@@ -50,3 +50,7 @@
     - name: Install Grafana Server
       include_tasks: grafana.yml
       when: server_name is match(".*grafana")
+
+    - name: Install Scouter Server
+      include_tasks: scouter.yml
+      when: server_name is match(".*scouter")
