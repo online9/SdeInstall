@@ -1,0 +1,57 @@
+---
+  - name: Define Scouter Variables
+    set_fact:
+      scouter_udp_port: 6100
+      scouter_tcp_port: 6100
+      scouter_version: 2.10.2
+      scouter_server_ip: 172.18.0.8
+      monitoring_path: "/sde/mon"
+
+  - name: Define variables for Scouter Binary
+    set_fact:
+      scouter_server_path: "{{ monitoring_path }}/scouter/server"
+      binary_sources:
+        - url:  "https://github.com/scouter-project/scouter/releases/download/v{{ scouter_version }}/scouter-all-{{ scouter_version }}.tar.gz"
+          dest: "{{ monitoring_path }}"
+
+  - name: Make Scouter folder
+    file:
+      path: "{{ monitoring_path }}"
+      state: directory
+      recurse: yes
+
+  - name: Download Binary
+    ansible.builtin.unarchive:
+      src: "{{ item.url }}"
+      dest: "{{ item.dest }}"
+      remote_src: yes
+      owner: "{{ item.owner | default('root') }}"
+      group: "{{ item.group | default('root') }}"
+    retries: 3
+    delay: 2
+    with_items: "{{ binary_sources }}"
+
+  - name: Install Java Roles
+    include_role:
+      name: "{{ rolevar }}"
+    loop:
+      - "{{ rolesPath }}/geerlingguy.java"
+    loop_control:
+      loop_var: rolevar
+
+  - name: Template a file to Scouter Config
+    ansible.builtin.template:
+      src: "{{ item.src }}"
+      dest: "{{ item.dest }}"
+      owner: "{{ item.owner | default('root') }}"
+      group: "{{ item.owner | default('root') }}"
+    with_items: 
+      - { src: "{{ sdePath }}/templates/scouter-config.conf.j2", dest: "{{ monitoring_path }}/scouter/agent.java/conf/scouter.conf" }
+      - { src: "{{ sdePath }}/templates/scouter-host-config.conf.j2", dest: "{{ monitoring_path }}/scouter/agent.host/conf/scouter.conf" }
+      - { src: "{{ sdePath }}/templates/scouter-host-service.conf.j2", dest: "/etc/systemd/system/scouter_host.service" }
+
+  - name: Restart service Scouter Host Server, in all cases
+    ansible.builtin.service:
+      name: scouter_host
+      state: restarted
+      enabled: yes

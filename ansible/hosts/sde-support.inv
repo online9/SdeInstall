@@ -15,4 +15,6 @@ Sde-CiCd ansible_host=172.18.0.5 server_type=ci server_name=jenkins
 Sde-Sonar ansible_host=172.18.0.6 server_type=analysis server_name=sonarqube
 Sde-Repo ansible_host=172.18.0.7 server_type=repository server_name=nexus
 Sde-Mon ansible_host=172.18.0.8 server_type=monitoring server_name=grafana,influx
+Sde-Apm ansible_host=172.18.0.9 server_type=apm server_name=scouter
+Sde-Elk ansible_host=172.18.0.10 server_type=log server_name=elasticsearch,kibana
 

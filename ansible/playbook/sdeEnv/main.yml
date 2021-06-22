@@ -43,6 +43,14 @@
       include_tasks: nexus.yml
       when: server_name is match(".*nexus")
 
+    - name: Install Elastic Search Server
+      include_tasks: elasticsearch.yml
+      when: server_name is match(".*elasticsearch")
+
+    - name: Install Kibana Server
+      include_tasks: kibana.yml
+      when: server_name is match(".*kibana")
+
     - name: Install Influx Server
       include_tasks: influx.yml
       when: server_name is match(".*influx")

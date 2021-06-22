@@ -3,7 +3,7 @@
 # 1 : Custom Type => Enter the IP and hostname list directly."
 [General]
 howToCreateVm=0
-totalVm=1
+totalVm=2
 baseOsName=BaseVm-CentOS7.9
 processorCount=8
 vmGeneration=2
@@ -38,7 +38,7 @@ preset=no
 ipRange=2
 switchName=Kube-VirtualSwitch
 baseVmIp=172.16.7.9
-startIp=172.18.0.4
+startIp=172.18.0.9
 netmask=255.240.0.0
 gatewayIp=172.16.0.1
 dns1=8.8.8.8
@@ -48,12 +48,12 @@ search=online9.com
 
 [Host]
 hostNamePrefix=sde
-#hostNameTemplate=awx,gitlab,gerrit,redmine,jenkins,sonarqube,nexus,mon
-#hostTypeTemplate=ansible,scm,codereview,issue,cicd,stat,repo,mon
-#vmNameTemplate=SdeAwx,SdeScm,SdeCodeReview,SdeIssue,SdeCi,SdeStat,SdeRepo,SdeMon
-hostNameTemplate=redmine
-hostTypeTemplate=issue
-vmNameTemplate=SdeIssue
+#hostNameTemplate=awx,gitlab,gerrit,redmine,jenkins,sonarqube,nexus,mon,scouter,elasticsearch
+#hostTypeTemplate=ansible,scm,codereview,issue,cicd,stat,repo,mon,apm,log
+#vmNameTemplate=SdeAwx,SdeScm,SdeCodeReview,SdeIssue,SdeCi,SdeStat,SdeRepo,SdeMon,SdeApm,SdeLog
+hostNameTemplate=scouter,elasticsearch
+hostTypeTemplate=apm,log
+vmNameTemplate=SdeApm,SdeLog
 
 [User]
 user=root

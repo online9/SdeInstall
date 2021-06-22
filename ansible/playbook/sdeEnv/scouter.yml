@@ -4,11 +4,21 @@
       scouter_udp_port: 6100
       scouter_tcp_port: 6100
       scouter_version: 2.10.2
+      scouter_influx_version: 1.2.0
+      influx_server_ip: 172.18.0.8
+      influx_udp_port: 8089
+      influx_http_port: 8086
       monitoring_path: "/sde/mon"
+      scouter_influx_integration: yes
+      influx_retention_policy: ""
+      influx_username: "admin"
+      influx_password: "password"
+      influx_db: "scouter"
 
-  - name: Define variables for Build Sources
+  - name: Define variables for Scouter Binary
     set_fact:
       scouter_server_path: "{{ monitoring_path }}/scouter/server"
+      scouter_influx_download_url: "https://github.com/scouter-contrib/scouter-plugin-server-influxdb/releases/download/v{{ scouter_influx_version }}"
       binary_sources:
         - url:  "https://github.com/scouter-project/scouter/releases/download/v{{ scouter_version }}/scouter-all-{{ scouter_version }}.tar.gz"
           dest: "{{ monitoring_path }}"
@@ -25,7 +35,7 @@
       work_name: "Scouter"
       port_info: 
         - { protocol: "udp", port: "{{ scouter_udp_port }}" }
-        - { protocol: "tcp", port: "{{ scouter_tcp_port }}" }
+        - { protocol: "tcp", port: "{{ influx_http_port }}" }
 
   - name: Download Binary
     ansible.builtin.unarchive:
@@ -34,6 +44,8 @@
       remote_src: yes
       owner: "{{ item.owner | default('root') }}"
       group: "{{ item.group | default('root') }}"
+    retries: 3
+    delay: 2
     with_items: "{{ binary_sources }}"
 
   - name: Install Java Roles
@@ -52,6 +64,34 @@
       group: "{{ item.owner | default('root') }}"
     with_items: 
       - { src: "{{ sdePath }}/templates/scouter-service.conf.j2", dest: "/etc/systemd/system/scouter.service" }
+
+  - name: Template a file to Scouter/Influx Integration Config
+    ansible.builtin.template:
+      src: "{{ item.src }}"
+      dest: "{{ item.dest }}"
+      owner: "{{ item.owner | default('root') }}"
+      group: "{{ item.owner | default('root') }}"
+    with_items: 
+      - { src: "{{ sdePath }}/templates/scouter-influx-config.conf.j2", dest: "{{ scouter_server_path }}/conf/scouter.conf" }
+    when: scouter_influx_integration is defined and scouter_influx_integration
+
+  - name: Download Scouter/Influx Integration Libraries
+    get_url:
+      url: "{{ scouter_influx_download_url }}/{{ item }}"
+      dest: "{{ scouter_server_path }}/lib"
+    retries: 3
+    delay: 2
+    with_items: 
+      - "converter-moshi-2.1.0.jar"
+      - "guava-19.0.jar"
+      - "influxdb-java-2.4.jar"
+      - "logging-interceptor-3.4.1.jar"
+      - "moshi-1.2.0.jar"
+      - "okhttp-3.4.1.jar"
+      - "okio-1.9.0.jar"
+      - "retrofit-2.1.0.jar"
+      - "scouter-plugin-server-influxdb-1.2.0.jar"
+    when: scouter_influx_integration is defined and scouter_influx_integration
 
   - name: Restart service Scouter Server, in all cases
     ansible.builtin.service:

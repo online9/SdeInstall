@@ -1,0 +1,23 @@
+---
+  - name: Define Elastic Search Variables
+    set_fact:
+      kibana_version: '7.x'
+      kibana_package_state: present
+      kibana_server_port: 5601
+      kibana_server_host: "0.0.0.0"
+      kibana_elasticsearch_url: "http://localhost:9200"
+
+  - name: Open Kibana Http port
+    include_tasks: "{{sdePath}}/open_firewall.yml"
+    vars:
+      work_name: "Kibana"
+      port_info: 
+        - { protocol: "tcp", port: "{{ kibana_server_port }}" }
+
+  - name: Install Kibana Search Roles
+    include_role:
+      name: "{{ rolevar }}"
+    loop:
+      - "{{ rolesPath }}/geerlingguy.kibana"
+    loop_control:
+      loop_var: rolevar

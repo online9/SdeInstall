@@ -49,6 +49,8 @@ ansible-galaxy install mrlesmithjr.apache2 -p /sde/cloud/ansible/roles
 ansible-galaxy install bngsudheer.centos_base -p /sde/cloud/ansible/roles
 ansible-galaxy install bngsudheer.ruby -p /sde/cloud/ansible/roles
 ansible-galaxy install bngsudheer.redmine -p /sde/cloud/ansible/roles
+ansible-galaxy install geerlingguy.elasticsearch -p /sde/cloud/ansible/roles
+ansible-galaxy install geerlingguy.kibana -p /sde/cloud/ansible/roles
 
 #ansible-galaxy install mesaguy.prometheus -p /sde/cloud/ansible/roles
 #ansible-galaxy install inkatze.wildfly -p /sde/cloud/ansible/roles
@@ -60,9 +62,7 @@ ansible-galaxy install bngsudheer.redmine -p /sde/cloud/ansible/roles
 #ansible-galaxy install alvistack.etcd -p /sde/cloud/ansible/roles
 #ansible-galaxy install geerlingguy.kubernetes -p /sde/cloud/ansible/roles
 #ansible-galaxy install geerlingguy.aws-inspector -p /sde/cloud/ansible/roles
-#ansible-galaxy install geerlingguy.elasticsearch -p /sde/cloud/ansible/roles
 #ansible-galaxy install geerlingguy.haproxy -p /sde/cloud/ansible/roles
-#ansible-galaxy install geerlingguy.kibana -p /sde/cloud/ansible/roles
 #ansible-galaxy install geerlingguy.logstash -p /sde/cloud/ansible/roles
 #ansible-galaxy install geerlingguy.nginx -p /sde/cloud/ansible/roles
 #ansible-galaxy install geerlingguy.redis -p /sde/cloud/ansible/roles

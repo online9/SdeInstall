@@ -1,0 +1,24 @@
+---
+  - name: Define Elastic Search Variables
+    set_fact:
+      elasticsearch_version: '7.x'
+      elasticsearch_package_state: present
+      elasticsearch_http_port: 9200
+      elasticsearch_heap_size_min: 4g
+      elasticsearch_heap_size_max: 8g
+
+  - name: Open Elastic Search Http port
+    include_tasks: "{{sdePath}}/open_firewall.yml"
+    vars:
+      work_name: "ElasticSearch"
+      port_info: 
+        - { protocol: "tcp", port: "{{ elasticsearch_http_port }}" }
+
+  - name: Install Elastic Search Roles
+    include_role:
+      name: "{{ rolevar }}"
+    loop:
+      - "{{ rolesPath }}/geerlingguy.java"
+      - "{{ rolesPath }}/geerlingguy.elasticsearch"
+    loop_control:
+      loop_var: rolevar
